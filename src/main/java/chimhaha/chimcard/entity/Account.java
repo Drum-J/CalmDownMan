@@ -14,19 +14,21 @@ import static lombok.AccessLevel.PROTECTED;
 
 @Entity @Getter
 @NoArgsConstructor(access = PROTECTED)
-public class Account {
+public class Account extends TimeStamped {
     @Id @GeneratedValue(strategy = IDENTITY)
     private Long id;
     private String username;
     private String password;
+    private String nickname;
 
     @Enumerated(value = STRING)
     private AccountRole role;
 
     @Builder
-    public Account(String username, String password, AccountRole role) {
+    public Account(String username, String password,String nickname, AccountRole role) {
         this.username = username;
         this.password = password;
+        this.nickname = nickname;
         this.role = role;
     }
 }
