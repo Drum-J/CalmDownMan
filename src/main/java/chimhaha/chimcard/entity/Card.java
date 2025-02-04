@@ -48,4 +48,14 @@ public class Card extends TimeStamped {
         this.grade = grade;
         this.power = power;
     }
+
+    @Override
+    public String toString() {
+        return "Card{" +
+                title +
+                ", " + grade +
+                ", " + attackType +
+                ", " + power +
+                "}";
+    }
 }
