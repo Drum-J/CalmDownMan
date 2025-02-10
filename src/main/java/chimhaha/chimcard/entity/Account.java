@@ -20,15 +20,33 @@ public class Account extends TimeStamped {
     private String username;
     private String password;
     private String nickname;
+    private String profileImage;
 
     @Enumerated(value = STRING)
     private AccountRole role;
 
     @Builder
-    public Account(String username, String password,String nickname, AccountRole role) {
+    public Account(String username, String password, String nickname, AccountRole role) {
         this.username = username;
         this.password = password;
         this.nickname = nickname;
+        this.role = role;
+        this.profileImage = null;
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void updatePassword(String password) {
+        this.password = password;
+    }
+
+    public void updateProfileImage(String profileImage) {
+        this.profileImage = profileImage;
+    }
+
+    public void updateRole(AccountRole role) {
         this.role = role;
     }
 }
