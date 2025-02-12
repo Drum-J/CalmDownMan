@@ -3,7 +3,6 @@ package chimhaha.chimcard.user;
 import chimhaha.chimcard.user.dto.SignUpDto;
 import chimhaha.chimcard.user.repository.AccountRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +14,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,12 +40,17 @@ public class SignUpTest {
                 .build();
 
         //when
-        mockMvc.perform(post("/api/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto))
-        ).andDo(MockMvcResultHandlers.print());
+        MvcResult mvcResult = mockMvc.perform(post("/api/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto))
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String content = mvcResult.getResponse().getContentAsString();
 
         //then
+        assertEquals(content, "회원 가입 완료!");
     }
 
     @Test
@@ -64,7 +69,7 @@ public class SignUpTest {
         String content = mvcResult.getResponse().getContentAsString();
 
         //then
-        Assertions.assertEquals(content, "해당 ID가 이미 존재합니다.");
+        assertEquals(content, "해당 ID가 이미 존재합니다.");
     }
 
     @Test
@@ -83,7 +88,7 @@ public class SignUpTest {
         String content = mvcResult.getResponse().getContentAsString();
 
         //then
-        Assertions.assertEquals(content, "사용 가능한 ID 입니다!");
+        assertEquals(content, "사용 가능한 ID 입니다!");
 
     }
 
@@ -98,13 +103,17 @@ public class SignUpTest {
                 .build();
 
         //when
-        mockMvc.perform(post("/api/signup")
+        MvcResult mvcResult = mockMvc.perform(post("/api/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto))
                 ).andDo(MockMvcResultHandlers.print())
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andReturn();
+
+        String content = mvcResult.getResponse().getContentAsString();
 
         //then
+        assertEquals(content,"이미 사용 중인 닉네임입니다.");
     }
 
     @Test
@@ -118,6 +127,30 @@ public class SignUpTest {
                 .build();
 
         //when
+        MvcResult mvcResult = mockMvc.perform(post("/api/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto))
+                ).andDo(MockMvcResultHandlers.print())
+                .andExpect(status().isBadRequest())
+                .andReturn();
+
+        String content = mvcResult.getResponse().getContentAsString();
+
+        //then
+        assertEquals(content, "비밀번호는 영문, 숫자, 특수문자 포함 8~20글자 이하로 입력해 주세요.");
+    }
+
+    @Test
+    @DisplayName("nickname 중복, passwordCheck 에러")
+    void nickname_password_error() throws Exception {
+        //given
+        SignUpDto dto = SignUpDto.builder()
+                .username("testUsername")
+                .nickname("drumj")
+                .password("pa12!")
+                .build();
+
+        //when
         mockMvc.perform(post("/api/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto))
@@ -125,6 +158,5 @@ public class SignUpTest {
                 .andExpect(status().isBadRequest());
 
         //then
-
     }
 }
