@@ -6,7 +6,6 @@ import chimhaha.chimcard.card.service.CardService;
 import chimhaha.chimcard.common.ApiResponse;
 import chimhaha.chimcard.entity.Card;
 import lombok.RequiredArgsConstructor;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,8 +25,11 @@ public class CardViewController {
     private final CardService cardService;
 
     @GetMapping
-    public List<Card> cards() {
-        return cardService.getAllCards();
+    public ApiResponse<List<CardResponseDto>> cards() {
+        List<CardResponseDto> list =
+                cardService.getAllCards().stream().map(CardResponseDto::new).toList();
+
+        return ApiResponse.success(list);
     }
 
     @GetMapping("/{id}")
@@ -45,10 +47,10 @@ public class CardViewController {
     }
 
     @GetMapping("/season/{seasonId}")
-    public void getCardsBySeason(@PathVariable("seasonId") Long seasonId, Model model) {
-        List<Card> cards = cardService.getCardsBySeason(seasonId);
+    public ApiResponse<List<CardResponseDto>> getCardsBySeason(@PathVariable("seasonId") Long seasonId) {
+        List<CardResponseDto> list =
+                cardService.getCardsBySeason(seasonId).stream().map(CardResponseDto::new).toList();
 
-        model.addAttribute("seasonId", seasonId);
-        model.addAttribute("cards", cards);
+        return ApiResponse.success(list);
     }
 }
