@@ -176,6 +176,23 @@ public class CardControllerUnitTest {
                 .andExpect(jsonPath("data").value(e.getMessage()));
     }
 
+    @Test
+    @DisplayName("등록된 카드가 없어도 에러는 발생하지 않음")
+    void cards_empty() throws Exception {
+        //given
+        given(cardService.getAllCards()).willReturn(List.of());
+
+        //when
+        mvc.perform(get("/api/card"))
+                .andDo(print());
+        // CardResponseDto::new 가 실행될 때 NPE가 발생할 거라 생각했지만
+        // 여기서 stream().map(CardResponseDto::new) 코드는 실행되지 않는다. 빈 list 이기 때문
+        // map()이 실행되지 않아서 그대로 빈 리스트가 반환된다 -> NPE가 발생하지 않음.
+
+        //then
+        verify(cardService).getAllCards();
+    }
+
     private static List<Card> makeCardList(CardSeason cardSeason) {
         Card card1 = Card.builder()
                 .title("card1")
