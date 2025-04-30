@@ -125,7 +125,7 @@ public class CardControllerUnitTest {
     void getCardsBySeason() throws Exception {
         //given
         CardSeason cardSeason = new CardSeason("season1", "imageUrl");
-        List<Card> cards = makeCardList(cardSeason);
+        List<Card> cards = CardTestUtil.createCards(cardSeason);
 
         // Equals And HashCode 미구현으로 인한 seasonName 비교
         // ID값으로 Equals/HashCode 구현하면 되지만 ID값의 생성을 DB에 위임.
@@ -184,7 +184,12 @@ public class CardControllerUnitTest {
 
         //when
         mvc.perform(get("/api/card"))
-                .andDo(print());
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("status").value(OK.value()))
+                .andExpect(jsonPath("message").value(OK.getReasonPhrase()))
+                .andExpect(jsonPath("time").exists())
+                .andExpect(jsonPath("data.size()").value(0));
         // CardResponseDto::new 가 실행될 때 NPE가 발생할 거라 생각했지만
         // 여기서 stream().map(CardResponseDto::new) 코드는 실행되지 않는다. 빈 list 이기 때문
         // map()이 실행되지 않아서 그대로 빈 리스트가 반환된다 -> NPE가 발생하지 않음.
@@ -193,32 +198,24 @@ public class CardControllerUnitTest {
         verify(cardService).getAllCards();
     }
 
-    private static List<Card> makeCardList(CardSeason cardSeason) {
-        Card card1 = Card.builder()
-                .title("card1")
-                .attackType(AttackType.ROCK)
-                .grade(Grade.SR)
-                .power(13)
-                .cardSeason(cardSeason)
-                .build();
+    @Test
+    @DisplayName("전체 카드 조회")
+    void cards() throws Exception {
+        //given
+        List<Card> cards = CardTestUtil.createCards(new CardSeason("season1", "imageUrl"));
 
-        Card card2 = Card.builder()
-                .title("card2")
-                .attackType(AttackType.SCISSORS)
-                .grade(Grade.R)
-                .power(9)
-                .cardSeason(cardSeason)
-                .build();
+        given(cardService.getAllCards()).willReturn(cards);
 
-        // 시즌이 다른 카드
-        Card card3 = Card.builder()
-                .title("card3")
-                .attackType(AttackType.ALL)
-                .grade(Grade.SSR)
-                .power(15)
-                .cardSeason(new CardSeason("season2", "imageUrl"))
-                .build();
+        //when
+        mvc.perform(get("/api/card"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("status").value(OK.value()))
+                .andExpect(jsonPath("message").value(OK.getReasonPhrase()))
+                .andExpect(jsonPath("time").exists())
+                .andExpect(jsonPath("data.size()").value(cards.size()));
 
-        return List.of(card1, card2, card3);
+        //then
+        verify(cardService).getAllCards();
     }
 }
