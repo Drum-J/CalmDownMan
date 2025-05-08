@@ -7,6 +7,7 @@ import chimhaha.chimcard.card.repository.CardRepository;
 import chimhaha.chimcard.card.repository.CardSeasonRepository;
 import chimhaha.chimcard.entity.Card;
 import chimhaha.chimcard.entity.CardSeason;
+import chimhaha.chimcard.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +23,7 @@ public class AdminCardService {
     @Transactional
     public void saveCard(CardCreateDto dto) {
         CardSeason cardSeason = cardSeasonRepository.findById(dto.cardSeasonId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 시즌 카드팩은 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 시즌 카드팩은 존재하지 않습니다."));
 
         Card card = Card.builder()
                 .title(dto.title())
@@ -38,7 +39,7 @@ public class AdminCardService {
     @Transactional
     public void updateCard(CardUpdateDto dto) {
         Card card = cardRepository.findById(dto.id())
-                .orElseThrow(() -> new IllegalArgumentException("해당 카드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 카드를 찾을 수 없습니다."));
 
         card.update(dto.title(), dto.power(), dto.attackType(), dto.grade());
     }

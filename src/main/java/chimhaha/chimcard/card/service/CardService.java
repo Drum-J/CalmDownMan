@@ -4,6 +4,7 @@ import chimhaha.chimcard.card.repository.CardRepository;
 import chimhaha.chimcard.card.repository.CardSeasonRepository;
 import chimhaha.chimcard.entity.Card;
 import chimhaha.chimcard.entity.CardSeason;
+import chimhaha.chimcard.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class CardService {
 
     public Card getCardById(Long id) {
         return cardRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 카드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 카드를 찾을 수 없습니다."));
     }
 
     public List<CardSeason> getCardSeasons() {
@@ -35,7 +36,7 @@ public class CardService {
 
     public List<Card> getCardsBySeason(Long seasonId) {
         CardSeason cardSeason = cardSeasonRepository.findById(seasonId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 시즌 카드팩은 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("해당 시즌 카드팩은 존재하지 않습니다."));
 
         return cardRepository.findByCardSeason(cardSeason);
     }

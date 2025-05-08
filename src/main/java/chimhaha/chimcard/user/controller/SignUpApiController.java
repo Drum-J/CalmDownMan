@@ -38,13 +38,9 @@ public class SignUpApiController {
     }
 
     @GetMapping("/checkUsername")
-    public ResponseEntity<ApiResponse<String>> checkUsername(@RequestParam("username") String username) {
-        boolean checked = signUpService.checkUsername(username);
+    public ApiResponse<String> checkUsername(@RequestParam("username") String username) {
+        signUpService.checkUsername(username);
 
-        if (!checked) {
-            return ResponseEntity.ok(ApiResponse.success("사용 가능한 ID 입니다!"));
-        } else {
-            return ResponseEntity.badRequest().body(ApiResponse.badRequest("해당 ID가 이미 존재합니다."));
-        }
+        return ApiResponse.success("사용 가능한 ID 입니다!");
     }
 }

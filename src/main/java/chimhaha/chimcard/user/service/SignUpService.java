@@ -18,6 +18,8 @@ public class SignUpService {
 
     @Transactional
     public void signUp(SignUpDto dto) {
+        checkUsername(dto.getUsername());
+
         Account account = Account.builder()
                 .username(dto.getUsername())
                 .nickname(dto.getNickname())
@@ -28,8 +30,10 @@ public class SignUpService {
         accountRepository.save(account);
     }
 
-    public boolean checkUsername(String username) {
-        return accountRepository.existsByUsername(username);
+    public void checkUsername(String username) {
+        if (accountRepository.existsByUsername(username)) {
+            throw new IllegalArgumentException("해당 ID가 이미 존재합니다.");
+        }
     }
 }
 
