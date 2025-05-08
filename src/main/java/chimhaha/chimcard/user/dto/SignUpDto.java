@@ -16,7 +16,7 @@ public class SignUpDto {
     @Size(min = 4, message = "아이디는 4글자 이상으로 입력해 주세요.")
     private String username;
 
-    @NotBlank(message = "닉네임을 입력해주세요.")
+    @NotBlank(message = "닉네임을 입력해 주세요.")
     @Size(min = 2, message = "닉네임은 2글자 이상으로 입력해 주세요.")
     @UniqueNickname
     private String nickname;

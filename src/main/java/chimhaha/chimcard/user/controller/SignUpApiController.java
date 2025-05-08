@@ -1,5 +1,6 @@
 package chimhaha.chimcard.user.controller;
 
+import chimhaha.chimcard.common.ApiResponse;
 import chimhaha.chimcard.user.dto.SignUpDto;
 import chimhaha.chimcard.user.service.SignUpService;
 import jakarta.validation.Valid;
@@ -24,26 +25,26 @@ public class SignUpApiController {
     private final SignUpService signUpService;
 
     @PostMapping
-    public ResponseEntity<String> singUp(@RequestBody @Valid SignUpDto dto, Errors errors) {
+    public ResponseEntity<ApiResponse<List<String>>> singUp(@RequestBody @Valid SignUpDto dto, Errors errors) {
         if (errors.hasErrors()) {
             List<String> errorMessages = errors.getAllErrors().stream()
                     .map(DefaultMessageSourceResolvable::getDefaultMessage).toList();
 
-            return ResponseEntity.badRequest().body(String.join(", ",errorMessages));
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest(errorMessages));
         }
 
         signUpService.signUp(dto);
-        return ResponseEntity.ok("회원 가입 완료!");
+        return ResponseEntity.ok(ApiResponse.success(List.of("회원 가입 완료!")));
     }
 
     @GetMapping("/checkUsername")
-    public ResponseEntity<String> checkUsername(@RequestParam("username") String username) {
+    public ResponseEntity<ApiResponse<String>> checkUsername(@RequestParam("username") String username) {
         boolean checked = signUpService.checkUsername(username);
 
         if (!checked) {
-            return ResponseEntity.ok("사용 가능한 ID 입니다!");
+            return ResponseEntity.ok(ApiResponse.success("사용 가능한 ID 입니다!"));
         } else {
-            return ResponseEntity.badRequest().body("해당 ID가 이미 존재합니다.");
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest("해당 ID가 이미 존재합니다."));
         }
     }
 }

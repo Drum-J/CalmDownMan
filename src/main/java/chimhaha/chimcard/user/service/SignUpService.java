@@ -21,7 +21,7 @@ public class SignUpService {
         Account account = Account.builder()
                 .username(dto.getUsername())
                 .nickname(dto.getNickname())
-                .password(dto.getPassword())
+                .password(dto.getPassword()) // TODO: Spring Security 추가 후 PasswordEncoder 사용
                 .role(USER)
                 .build();
 
