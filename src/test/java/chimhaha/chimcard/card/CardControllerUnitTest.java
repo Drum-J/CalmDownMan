@@ -1,6 +1,6 @@
 package chimhaha.chimcard.card;
 
-import chimhaha.chimcard.card.controller.CardViewController;
+import chimhaha.chimcard.card.controller.CardReadController;
 import chimhaha.chimcard.card.service.CardService;
 import chimhaha.chimcard.entity.AttackType;
 import chimhaha.chimcard.entity.Card;
@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(CardViewController.class)
+@WebMvcTest(CardReadController.class)
 @AutoConfigureMockMvc
 public class CardControllerUnitTest {
 
