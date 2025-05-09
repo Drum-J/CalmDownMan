@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/card")
 @RequiredArgsConstructor
-public class CardApiController {
+public class CardAdminController {
 
     private final AdminCardService adminCardService;
 

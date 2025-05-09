@@ -20,7 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/card")
 @RequiredArgsConstructor
-public class CardViewController {
+public class CardReadController {
 
     private final CardService cardService;
 
