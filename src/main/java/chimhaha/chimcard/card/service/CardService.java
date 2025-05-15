@@ -1,20 +1,17 @@
 package chimhaha.chimcard.card.service;
 
+import chimhaha.chimcard.card.repository.AccountCardRepository;
 import chimhaha.chimcard.card.repository.CardRepository;
 import chimhaha.chimcard.card.repository.CardSeasonRepository;
-import chimhaha.chimcard.entity.Card;
-import chimhaha.chimcard.entity.CardSeason;
-import chimhaha.chimcard.entity.Grade;
+import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
+import chimhaha.chimcard.user.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -23,8 +20,12 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class CardService {
 
+    private final CardDrawService cardDrawService;
     private final CardRepository cardRepository;
     private final CardSeasonRepository cardSeasonRepository;
+
+    private final AccountRepository accountRepository;
+    private final AccountCardRepository accountCardRepository;
 
     public List<Card> getAllCards() {
         return cardRepository.findAll();
@@ -46,66 +47,33 @@ public class CardService {
         return cardRepository.findByCardSeason(cardSeason);
     }
 
+    @Transactional
     public List<Card> cardPackOpen(Long seasonId) {
         Map<Grade, List<Card>> map = getCardsBySeason(seasonId)
                 .stream().collect(Collectors.groupingBy(Card::getGrade));
 
+        //TODO: 전달 받은 Account.id 값으로 account 조회해서 사용하기
+        Account account = accountRepository.findById(1L)
+                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
+
         List<Card> drawnCards = new ArrayList<>();
+        List<AccountCard> insertList = new ArrayList<>();
         Random random = new Random();
 
         for (int i = 0; i < 3; i++) {
-            Card drawnCard = drawCardBySeason(map, random, seasonId);
+            Card drawnCard = cardDrawService.draw(map, random, seasonId);
             drawnCards.add(drawnCard);
+
+            Optional<AccountCard> findCard = accountCardRepository.findByAccountAndCard(account, drawnCard);
+            if (findCard.isPresent()) {
+                findCard.get().increaseCount(); // 중복 카드일 경우 갯수 업데이트
+            } else {
+                insertList.add(new AccountCard(account, drawnCard));
+            }
         }
 
-        // TODO: 뽑은 카드(drawnCards) -> 회원이 가진 카드로 등록
+        accountCardRepository.saveAll(insertList); // 뽑은 카드 일괄 저장
 
         return drawnCards;
-    }
-
-    private Card drawCardBySeason(Map<Grade, List<Card>> map, Random random, Long seasonId) {
-        if (seasonId == 1) {
-            int randomValue = random.nextInt(100);
-            return drawCardSeason1(map, randomValue);
-        } else if (seasonId == 2) {
-            int randomValue = random.nextInt(10000);
-            return drawCardSeason2(map, randomValue);
-        }
-
-        return null;
-    }
-
-    private Card drawCardSeason1(Map<Grade, List<Card>> map, int randomValue) {
-        if (randomValue < 1) { //1% (0)
-            return getRandomCardByGrade(map, Grade.SSR);
-        } else if (randomValue < 11) { //10% (1 ~ 10)
-            return getRandomCardByGrade(map, Grade.SR);
-        } else if (randomValue < 45) { // 34% (11 ~ 44)
-            return getRandomCardByGrade(map, Grade.R);
-        } else { // 55% (45 ~ 99)
-            return getRandomCardByGrade(map, Grade.N);
-        }
-    }
-
-    private Card drawCardSeason2(Map<Grade, List<Card>> map, int randomValue) {
-        if (randomValue < 32) { // 0.32%
-            return getRandomCardByGrade(map, Grade.SSR);
-        } else if (randomValue < 432) { // 4%
-            return getRandomCardByGrade(map, Grade.SR);
-        } else if (randomValue < 2232) { // 18%
-            return getRandomCardByGrade(map, Grade.R);
-        } else if (randomValue < 6900) { // 46.68%
-            return getRandomCardByGrade(map, Grade.N);
-        } else if (randomValue < 9900) { // 30%
-            return getRandomCardByGrade(map, Grade.C);
-        } else { // 1%
-            return getRandomCardByGrade(map, Grade.V);
-        }
-    }
-
-    private Card getRandomCardByGrade(Map<Grade, List<Card>> map, Grade grade) {
-        List<Card> cards = map.get(grade);
-
-        return cards.get(new Random().nextInt(cards.size()));
     }
 }

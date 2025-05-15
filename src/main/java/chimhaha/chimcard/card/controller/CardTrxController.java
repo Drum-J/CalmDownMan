@@ -26,6 +26,7 @@ public class CardTrxController {
 
     @PostMapping("/open/{seasonId}")
     public ApiResponse<List<CardResponseDto>> cardPackOpen(@PathVariable("seasonId") Long seasonId) {
+        //TODO : 유저 ID (Account.id) 값 넘겨주기 -> SpringSecurity 적용 이후 ContextHolder 사용
         List<CardResponseDto> list = cardService.cardPackOpen(seasonId).stream().map(CardResponseDto::new).toList();
 
         return ApiResponse.success(list);
