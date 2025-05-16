@@ -1,6 +1,6 @@
 package chimhaha.chimcard.jwt;
 
-import chimhaha.chimcard.exception.JwtException;
+import chimhaha.chimcard.exception.InvalidTokenException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
@@ -49,17 +49,17 @@ class JwtProviderTest {
 
             System.out.println(claims.getPayload());
         } catch (ExpiredJwtException e) {
-            throw new JwtException("만료된 JWT 토큰입니다.");
+            throw new InvalidTokenException("만료된 JWT 토큰입니다.");
         } catch (UnsupportedJwtException e) {
-            throw new JwtException("지원하지 않는 JWT 토큰입니다.");
+            throw new InvalidTokenException("지원하지 않는 JWT 토큰입니다.");
         } catch (MalformedJwtException e) {
-            throw new JwtException("JWT 구조가 손상되었거나 잘못된 형식입니다.");
+            throw new InvalidTokenException("JWT 구조가 손상되었거나 잘못된 형식입니다.");
         }catch (SecurityException e) {
-            throw new JwtException("JWT 서명 검증에 실패했습니다.", e);
+            throw new InvalidTokenException("JWT 서명 검증에 실패했습니다.", e);
         } catch (IllegalArgumentException e) {
-            throw new JwtException("JWT 토큰이 잘못 되었습니다.", e);
+            throw new InvalidTokenException("JWT 토큰이 잘못 되었습니다.", e);
         } catch (Exception e) {
-            throw new JwtException("JWT 예기치 않은 예외 발생", e);
+            throw new InvalidTokenException("JWT 예기치 않은 예외 발생", e);
         }
     }
 
