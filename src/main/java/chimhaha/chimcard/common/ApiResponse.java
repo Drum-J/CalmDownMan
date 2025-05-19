@@ -26,6 +26,10 @@ public record ApiResponse<T>(int status,
         return new ApiResponse<>(UNAUTHORIZED.value(), UNAUTHORIZED.getReasonPhrase(), now(), data);
     }
 
+    public static <T> ApiResponse<T> forbidden(T data) {
+        return new ApiResponse<>(FORBIDDEN.value(), FORBIDDEN.getReasonPhrase(), now(), data);
+    }
+
     public static <T> ApiResponse<T> error(T data) {
         return new ApiResponse<>(INTERNAL_SERVER_ERROR.value(),
                 INTERNAL_SERVER_ERROR.getReasonPhrase(), now(), data);

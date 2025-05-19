@@ -1,19 +1,21 @@
 package chimhaha.chimcard.jwt;
 
+import chimhaha.chimcard.entity.Account;
 import chimhaha.chimcard.exception.InvalidTokenException;
+import chimhaha.chimcard.user.dto.TokenResponseDto;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.List;
 
-import static chimhaha.chimcard.entity.AccountRole.ADMIN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+@Slf4j
 @Component
 @EnableConfigurationProperties({JwtProperties.class})
 public class JwtProvider {
@@ -25,20 +27,20 @@ public class JwtProvider {
         this.secretKey = Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(UTF_8));
     }
 
-    public List<String> generateToken() {
+    public TokenResponseDto generateToken(Account account) {
         Date now = new Date();
 
-        String accessToken = tokenBuilder(now, jwtProperties.getExpiration());//access token 생성
-        String refreshToken = tokenBuilder(now, jwtProperties.getRefreshExpiration());//refresh token 생성
+        String accessToken = tokenBuilder(account, now, jwtProperties.getExpiration());//access token 생성
+        String refreshToken = tokenBuilder(account, now, jwtProperties.getRefreshExpiration());//refresh token 생성
 
-        return List.of(accessToken, refreshToken);
+        return new TokenResponseDto(accessToken, refreshToken);
     }
 
-    public void validateToken(String token) {
+    public boolean validateToken(String token) {
         try {
             Jws<Claims> claims = parseToken(token);
-
-            System.out.println(claims.getPayload());
+            log.info("Claims : {}", claims.getPayload().get("id"));
+            return true;
         } catch (ExpiredJwtException e) {
             throw new InvalidTokenException("만료된 JWT 토큰입니다.");
         } catch (UnsupportedJwtException e) {
@@ -55,11 +57,11 @@ public class JwtProvider {
     }
 
 
-    private String tokenBuilder(Date now, long time) {
+    private String tokenBuilder(Account account, Date now, long time) {
         Date expirationTime = new Date(now.getTime() + time);
 
         return Jwts.builder()
-                .claims(getClaims())
+                .claims(getClaims(account))
                 .issuer(jwtProperties.getIssuer())
                 .issuedAt(now)
                 .expiration(expirationTime)
@@ -67,12 +69,11 @@ public class JwtProvider {
                 .compact();
     }
 
-    private Claims getClaims() {
-        // TODO: 실제 Account_id, Account_nickname, Account_role 가져오기
+    private Claims getClaims(Account account) {
         return Jwts.claims()
-                .add("id",1)
-                .add("nickname","testUser")
-                .add("role", ADMIN.name())
+                .add("id",account.getId())
+                .add("nickname",account.getNickname())
+                .add("role", account.getRole())
                 .build();
     }
 

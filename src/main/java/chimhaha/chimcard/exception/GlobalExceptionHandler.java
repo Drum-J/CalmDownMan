@@ -2,10 +2,12 @@ package chimhaha.chimcard.exception;
 
 import chimhaha.chimcard.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import static org.springframework.http.HttpStatus.*;
 
 @Slf4j
 @RestControllerAdvice
@@ -13,22 +15,27 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<String>> notFound(ResourceNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.notFound(e.getMessage()));
+        return ResponseEntity.status(NOT_FOUND).body(ApiResponse.notFound(e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<String>> badRequest(IllegalArgumentException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.badRequest(e.getMessage()));
+        return ResponseEntity.status(BAD_REQUEST).body(ApiResponse.badRequest(e.getMessage()));
     }
 
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ApiResponse<String>> invalidToken(InvalidTokenException e) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.unAuthorized(e.getMessage()));
+        return ResponseEntity.status(UNAUTHORIZED).body(ApiResponse.unAuthorized(e.getMessage()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<String>> accessDeniedException(AccessDeniedException e) {
+        return ResponseEntity.status(FORBIDDEN).body(ApiResponse.forbidden(e.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<String>> internalServerError(Exception e) {
         log.error("Internal Server Error: ", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(e.getMessage()));
+        return ResponseEntity.status(INTERNAL_SERVER_ERROR).body(ApiResponse.error(e.getMessage()));
     }
 }
