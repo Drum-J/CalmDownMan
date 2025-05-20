@@ -8,6 +8,9 @@ import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -56,6 +59,18 @@ public class JwtProvider {
         }
     }
 
+
+    public void setAuthentication(String token) {
+        Claims claims = parseToken(token).getPayload();
+
+        Long id = claims.get("id", Long.class);
+        String role = claims.get("role", String.class);
+
+        UsernamePasswordAuthenticationToken auth
+                = new UsernamePasswordAuthenticationToken(id, null, AuthorityUtils.createAuthorityList(role));
+
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
 
     private String tokenBuilder(Account account, Date now, long time) {
         Date expirationTime = new Date(now.getTime() + time);

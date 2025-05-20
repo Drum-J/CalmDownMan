@@ -35,8 +35,6 @@ class JwtProviderTest {
         //then
         System.out.println("Access token: " + accessToken);
         System.out.println("Refresh token: " + refreshToken);
-
-        // TODO: 생성된 토큰 모두 반환하고, refreshToken은 DB에 추가 저장하기
     }
 
     @Test
