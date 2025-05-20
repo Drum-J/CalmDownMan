@@ -4,6 +4,7 @@ import chimhaha.chimcard.entity.Account;
 import chimhaha.chimcard.user.dto.SignUpDto;
 import chimhaha.chimcard.user.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import static chimhaha.chimcard.entity.AccountRole.USER;
 public class SignUpService {
 
     private final AccountRepository accountRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public void signUp(SignUpDto dto) {
@@ -23,7 +25,7 @@ public class SignUpService {
         Account account = Account.builder()
                 .username(dto.getUsername())
                 .nickname(dto.getNickname())
-                .password(dto.getPassword()) // TODO: Spring Security 추가 후 PasswordEncoder 사용
+                .password(passwordEncoder.encode(dto.getPassword()))
                 .role(USER)
                 .build();
 

@@ -1,5 +1,6 @@
 package chimhaha.chimcard.jwt;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,8 +24,9 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
-        if (StringUtils.hasText(token) && jwtProvider.validateToken(token)) {
-            jwtProvider.setAuthentication(token);
+        if (StringUtils.hasText(token)) {
+            Claims claims = jwtProvider.validateToken(token);
+            jwtProvider.setAuthentication(claims);
         }
 
         filterChain.doFilter(request, response);
@@ -37,5 +39,12 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        return request.getServletPath().startsWith("/api/login") ||
+                request.getServletPath().startsWith("/api/token/refresh") ||
+                request.getServletPath().startsWith("/api/logout");
     }
 }

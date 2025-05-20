@@ -39,11 +39,11 @@ public class JwtProvider {
         return new TokenResponseDto(accessToken, refreshToken);
     }
 
-    public boolean validateToken(String token) {
+    public Claims validateToken(String token) {
         try {
-            Jws<Claims> claims = parseToken(token);
-            log.info("Claims : {}", claims.getPayload().get("id"));
-            return true;
+            Claims claims = parseToken(token);
+            log.info("Claims : {}", claims.get("id"));
+            return claims;
         } catch (ExpiredJwtException e) {
             throw new InvalidTokenException("만료된 JWT 토큰입니다.");
         } catch (UnsupportedJwtException e) {
@@ -59,10 +59,7 @@ public class JwtProvider {
         }
     }
 
-
-    public void setAuthentication(String token) {
-        Claims claims = parseToken(token).getPayload();
-
+    public void setAuthentication(Claims claims) {
         Long id = claims.get("id", Long.class);
         String role = claims.get("role", String.class);
 
@@ -92,10 +89,11 @@ public class JwtProvider {
                 .build();
     }
 
-    private Jws<Claims> parseToken(String token) {
+    private Claims parseToken(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)
                 .build()
-                .parseSignedClaims(token);
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

@@ -1,9 +1,6 @@
 package chimhaha.chimcard.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,6 +11,12 @@ import static lombok.AccessLevel.PROTECTED;
 
 @Entity @Getter
 @NoArgsConstructor(access = PROTECTED)
+@Table(
+    indexes = {
+        @Index(name = "idx_username", columnList = "username"),
+        @Index(name = "idx_nickname", columnList = "nickname"),
+    }
+)
 public class Account extends TimeStamped {
     @Id @GeneratedValue(strategy = IDENTITY)
     private Long id;
@@ -21,6 +24,7 @@ public class Account extends TimeStamped {
     private String password;
     private String nickname;
     private String profileImage;
+    private String refreshToken;
 
     @Enumerated(value = STRING)
     private AccountRole role;
@@ -32,6 +36,7 @@ public class Account extends TimeStamped {
         this.nickname = nickname;
         this.role = role;
         this.profileImage = null;
+        this.refreshToken = null;
     }
 
     public void updateNickname(String nickname) {
@@ -48,5 +53,9 @@ public class Account extends TimeStamped {
 
     public void updateRole(AccountRole role) {
         this.role = role;
+    }
+
+    public void updateToken(String refreshToken) {
+        this.refreshToken = refreshToken;
     }
 }
