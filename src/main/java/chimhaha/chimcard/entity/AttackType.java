@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum AttackType {
-    ROCK("묵"), SCISSORS("찌"), PAPER("빠"), ALL("ALL");
+    ROCK("바위"), SCISSORS("가위"), PAPER("보"), ALL("ALL");
 
     private final String type;
 

@@ -31,8 +31,8 @@ public class CardService {
         return cardRepository.findAll();
     }
 
-    public Card getCardById(Long id) {
-        return cardRepository.findById(id)
+    public Card getCardById(Long cardId) {
+        return cardRepository.findById(cardId)
                 .orElseThrow(() -> new ResourceNotFoundException("해당 카드를 찾을 수 없습니다."));
     }
 
@@ -48,13 +48,12 @@ public class CardService {
     }
 
     @Transactional
-    public List<Card> cardPackOpen(Long seasonId) {
+    public List<Card> cardPackOpen(Long accountId, Long seasonId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
+
         Map<Grade, List<Card>> map = getCardsBySeason(seasonId)
                 .stream().collect(Collectors.groupingBy(Card::getGrade));
-
-        //TODO: 전달 받은 Account.id 값으로 account 조회해서 사용하기
-        Account account = accountRepository.findById(1L)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
 
         List<Card> drawnCards = new ArrayList<>();
         List<AccountCard> insertList = new ArrayList<>();
@@ -75,5 +74,12 @@ public class CardService {
         accountCardRepository.saveAll(insertList); // 뽑은 카드 일괄 저장
 
         return drawnCards;
+    }
+
+    public List<AccountCard> getMyCards(Long accountId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
+
+        return accountCardRepository.findByAccount(account);
     }
 }

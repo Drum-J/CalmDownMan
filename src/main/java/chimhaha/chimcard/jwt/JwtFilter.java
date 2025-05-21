@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -24,10 +23,8 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
-        if (StringUtils.hasText(token)) {
-            Claims claims = jwtProvider.validateToken(token);
-            jwtProvider.setAuthentication(claims);
-        }
+        Claims claims = jwtProvider.validateToken(token);
+        jwtProvider.setAuthentication(claims);
 
         filterChain.doFilter(request, response);
     }

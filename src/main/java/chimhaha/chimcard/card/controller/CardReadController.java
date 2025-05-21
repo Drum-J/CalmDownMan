@@ -2,9 +2,11 @@ package chimhaha.chimcard.card.controller;
 
 import chimhaha.chimcard.card.dto.CardResponseDto;
 import chimhaha.chimcard.card.dto.CardSeasonResponseDto;
+import chimhaha.chimcard.card.dto.MyCardResponseDto;
 import chimhaha.chimcard.card.service.CardService;
 import chimhaha.chimcard.common.ApiResponse;
 import chimhaha.chimcard.entity.Card;
+import chimhaha.chimcard.utils.AccountUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,6 +52,16 @@ public class CardReadController {
     public ApiResponse<List<CardResponseDto>> getCardsBySeason(@PathVariable("seasonId") Long seasonId) {
         List<CardResponseDto> list =
                 cardService.getCardsBySeason(seasonId).stream().map(CardResponseDto::new).toList();
+
+        return ApiResponse.success(list);
+    }
+
+    @GetMapping("/myCards")
+    public ApiResponse<List<MyCardResponseDto>> getMyCards() {
+        Long id = AccountUtils.getAccountId();
+
+        List<MyCardResponseDto> list = cardService.getMyCards(id).stream().map(
+                ac -> new MyCardResponseDto(ac.getCard(), ac.getCount())).toList();
 
         return ApiResponse.success(list);
     }
