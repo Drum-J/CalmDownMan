@@ -58,4 +58,14 @@ public class Account extends TimeStamped {
     public void updateToken(String refreshToken) {
         this.refreshToken = refreshToken;
     }
+
+    @Override
+    public String toString() {
+        return "Account{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", nickname='" + nickname + '\'' +
+                ", role=" + role.name() +
+                '}';
+    }
 }
