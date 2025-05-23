@@ -5,15 +5,21 @@ import chimhaha.chimcard.card.dto.MyCardResponseDto;
 import chimhaha.chimcard.card.dto.QMyCardDetailDto;
 import chimhaha.chimcard.entity.Account;
 import chimhaha.chimcard.entity.AccountCard;
+import chimhaha.chimcard.entity.Card;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.user.repository.AccountRepository;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
+import static chimhaha.chimcard.entity.QAccount.account;
 import static chimhaha.chimcard.entity.QAccountCard.accountCard;
+import static chimhaha.chimcard.entity.QCard.card;
+import static chimhaha.chimcard.entity.QCardSeason.cardSeason;
+import static com.querydsl.jpa.JPAExpressions.select;
 
 public class AccountCardQueryTest extends QueryDslTest {
 
@@ -90,5 +96,54 @@ public class AccountCardQueryTest extends QueryDslTest {
         for (MyCardDetailDto dto : result) {
             System.out.println(dto);
         }
+    }
+
+    @Test
+    @DisplayName("소유하지 않은 카드 조회")
+    void getCardsNotMine() throws Exception {
+        //given
+        Long accountId = 1L;
+
+        //when
+        List<Card> result = query
+                .selectFrom(card)
+                .where(card.id.notIn(
+                    //JPAExpressions 사용 (서브쿼리)
+                    select(accountCard.card().id)
+                        .from(accountCard)
+                        .where(accountCard.account().id.eq(accountId))
+                ), cardSeasonEq(1L))
+                .fetch();
+
+        //then
+        System.out.println("총 " + result.size() + "종 부족");
+        for (Card c : result) {
+            System.out.println(c.getId() + ": " + c.getTitle());
+        }
+    }
+
+    private BooleanExpression cardSeasonEq(Long cardSeasonId) {
+        return cardSeasonId != null ? cardSeason.id.eq(cardSeasonId) : null;
+    }
+
+    @Test
+    @DisplayName("해당 카드를 가지고 있는 유저 조회")
+    void getCardOwner() throws Exception {
+        //given
+        Long cardId = 6L; // 현재 DB 상 6, 24, 26, 27, 29 카드는 겹침
+
+        //when
+        List<Account> result = query
+                .selectFrom(account)
+                .where(account.id.in(
+                    select(accountCard.account().id)
+                        .from(accountCard)
+                        .where(accountCard.card().id.eq(cardId))
+                ))
+                .fetch();
+
+        //then
+        List<String> nicknames = result.stream().map(Account::getNickname).toList();
+        System.out.println(nicknames);
     }
 }
