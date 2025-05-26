@@ -1,6 +1,8 @@
 package chimhaha.chimcard.card.service;
 
+import chimhaha.chimcard.card.dto.MyCardDetailDto;
 import chimhaha.chimcard.card.repository.AccountCardRepository;
+import chimhaha.chimcard.card.repository.CardCustomRepository;
 import chimhaha.chimcard.card.repository.CardRepository;
 import chimhaha.chimcard.card.repository.CardSeasonRepository;
 import chimhaha.chimcard.entity.*;
@@ -23,6 +25,7 @@ public class CardService {
     private final CardDrawService cardDrawService;
     private final CardRepository cardRepository;
     private final CardSeasonRepository cardSeasonRepository;
+    private final CardCustomRepository cardCustomRepository;
 
     private final AccountRepository accountRepository;
     private final AccountCardRepository accountCardRepository;
@@ -76,10 +79,15 @@ public class CardService {
         return drawnCards;
     }
 
-    public List<AccountCard> getMyCards(Long accountId) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
+    public List<MyCardDetailDto> getMyCards(Long accountId, Long cardSeasonId) {
+        return cardCustomRepository.getMyCards(accountId,cardSeasonId);
+    }
 
-        return accountCardRepository.findByAccount(account);
+    public List<Card> getNotMyCards(Long accountId, Long cardSeasonId) {
+        return cardCustomRepository.getNotMyCards(accountId, cardSeasonId);
+    }
+
+    public List<Account> getCardOwner(Long id) {
+        return cardCustomRepository.getCardOwner(id);
     }
 }

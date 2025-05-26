@@ -25,6 +25,12 @@ public class AccountCardQueryTest extends QueryDslTest {
 
     @Autowired AccountRepository accountRepository;
 
+    /**
+    * TODO: 현재 JPA와 QueryDSL을 사용한 데이터 조회의 성능은 JPA:200ms, QueryDSL:680ms 정도로 약 3배 이상 차이난다.
+    * 추후에 성능 확인 필요
+    */
+
+
     @Test
     @DisplayName("accountId로 Account 조회 후 AccountCard 재조회")
     void getCardsByAccount() throws Exception {
@@ -102,7 +108,7 @@ public class AccountCardQueryTest extends QueryDslTest {
     @DisplayName("소유하지 않은 카드 조회")
     void getCardsNotMine() throws Exception {
         //given
-        Long accountId = 1L;
+        Long accountId = 8L;
 
         //when
         List<Card> result = query
@@ -112,7 +118,7 @@ public class AccountCardQueryTest extends QueryDslTest {
                     select(accountCard.card().id)
                         .from(accountCard)
                         .where(accountCard.account().id.eq(accountId))
-                ), cardSeasonEq(1L))
+                ), cardSeasonEq(null))
                 .fetch();
 
         //then

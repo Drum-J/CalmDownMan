@@ -2,16 +2,15 @@ package chimhaha.chimcard.card.controller;
 
 import chimhaha.chimcard.card.dto.CardResponseDto;
 import chimhaha.chimcard.card.dto.CardSeasonResponseDto;
-import chimhaha.chimcard.card.dto.MyCardResponseDto;
+import chimhaha.chimcard.card.dto.MyCardDetailDto;
 import chimhaha.chimcard.card.service.CardService;
 import chimhaha.chimcard.common.ApiResponse;
 import chimhaha.chimcard.entity.Card;
+import chimhaha.chimcard.user.dto.UserDetailDto;
 import chimhaha.chimcard.utils.AccountUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -19,6 +18,7 @@ import java.util.List;
  * 공용) 카드 및 시즌 조회용 Controller
  */
 
+@Slf4j
 @RestController
 @RequestMapping("/api/card")
 @RequiredArgsConstructor
@@ -56,12 +56,24 @@ public class CardReadController {
         return ApiResponse.success(list);
     }
 
-    @GetMapping("/myCards")
-    public ApiResponse<List<MyCardResponseDto>> getMyCards() {
+    @GetMapping("/mine")
+    public ApiResponse<List<MyCardDetailDto>> getMyCards(@RequestParam(required = false) Long cardSeasonId) {
         Long id = AccountUtils.getAccountId();
 
-        List<MyCardResponseDto> list = cardService.getMyCards(id).stream().map(
-                ac -> new MyCardResponseDto(ac.getCard(), ac.getCount())).toList();
+        return ApiResponse.success(cardService.getMyCards(id, cardSeasonId));
+    }
+
+    @GetMapping("/notMine")
+    public ApiResponse<List<CardResponseDto>> getNotMyCards(@RequestParam(required = false) Long cardSeasonId) {
+        Long id = AccountUtils.getAccountId();
+        List<CardResponseDto> list = cardService.getNotMyCards(id, cardSeasonId).stream().map(CardResponseDto::new).toList();
+
+        return ApiResponse.success(list);
+    }
+
+    @GetMapping("/owner/{id}")
+    public ApiResponse<List<UserDetailDto>> getCardOwner(@PathVariable("id") Long id) {
+        List<UserDetailDto> list = cardService.getCardOwner(id).stream().map(UserDetailDto::new).toList();
 
         return ApiResponse.success(list);
     }
