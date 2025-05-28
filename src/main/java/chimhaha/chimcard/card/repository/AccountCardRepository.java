@@ -12,4 +12,6 @@ public interface AccountCardRepository extends JpaRepository<AccountCard, Long> 
     Optional<AccountCard> findByAccountAndCard(Account account, Card card);
 
     List<AccountCard> findByAccount(Account account);
+
+    List<AccountCard> findByAccountInAndCardIn(List<Account> accounts, List<Card> cards);
 }

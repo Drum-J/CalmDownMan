@@ -34,15 +34,28 @@ public class AccountCard extends TimeStamped{
     @JoinColumn(name = "card_id")
     private Card card;
 
-    private int count; // 카드 갯수
+    private long count; // 카드 갯수
 
     public AccountCard(Account account, Card card) {
+        this(account, card, 1);
+    }
+
+    public AccountCard(Account account, Card card, long count) {
         this.account = account;
         this.card = card;
-        this.count = 1;
+        this.count = count;
     }
 
     public void increaseCount() {
         this.count++;
+    }
+
+    public boolean decreaseCount() {
+        this.count--;
+        return count == 0;
+    }
+
+    public void tradeCardCount(long count) {
+        this.count += count;
     }
 }

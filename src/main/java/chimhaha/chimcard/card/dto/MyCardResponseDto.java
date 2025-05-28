@@ -12,9 +12,9 @@ public class MyCardResponseDto {
     private final Grade grade;
     private final int power;
     private final String cardSeason;
-    private final int count;
+    private final long count;
 
-    public MyCardResponseDto(Card card, int count) {
+    public MyCardResponseDto(Card card, long count) {
         this.id = card.getId();
         this.title = card.getTitle();
         this.attackType = card.getAttackType().getType();
