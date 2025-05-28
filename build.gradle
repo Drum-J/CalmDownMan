@@ -50,6 +50,9 @@ dependencies {
     // OpenFeign QueryDSL
     implementation 'io.github.openfeign.querydsl:querydsl-jpa:6.11'
     annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:6.11:jpa'
+
+    // p6spy
+    implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.1'
 }
 
 tasks.named('test') {
