@@ -6,10 +6,11 @@ import com.p6spy.engine.spy.appender.MessageFormattingStrategy;
 import jakarta.annotation.PostConstruct;
 import org.hibernate.engine.jdbc.internal.FormatStyle;
 import org.springframework.context.annotation.Configuration;
-
 import java.util.Locale;
+
 @Configuration
 public class P6SpyConfig implements MessageFormattingStrategy {
+
     @PostConstruct
     public void setLogMessageFormat() {
         P6SpyOptions.getActiveInstance().setLogMessageFormat(this.getClass().getName());
@@ -32,5 +33,4 @@ public class P6SpyConfig implements MessageFormattingStrategy {
         }
         return sql;
     }
-
 }
