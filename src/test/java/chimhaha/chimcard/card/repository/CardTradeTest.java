@@ -81,11 +81,9 @@ public class CardTradeTest extends QueryDslTest {
             }
 
             // 5. 모든 검증이 끝났다면 수량 차감 및 삭제 처리
-            for (int i = 0; i < requiredCount; i++) {
-                if (owned.decreaseCount()) {
-                    accountCardRepository.delete(owned);
-                    break;
-                }
+            if (owned.decreaseCount(requiredCount)) {
+                accountCardRepository.delete(owned);
+                break;
             }
         }
     }

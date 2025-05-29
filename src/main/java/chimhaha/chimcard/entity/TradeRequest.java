@@ -31,7 +31,7 @@ public class TradeRequest extends TimeStamped {
     private Account requester;
 
     @OneToMany(mappedBy = "tradeRequest", cascade = ALL, orphanRemoval = true)
-    private final List<TradeRequestCard> cards = new ArrayList<>();
+    private final List<TradeRequestCard> requesterCards = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     private TradeStatus tradeStatus;
@@ -40,6 +40,10 @@ public class TradeRequest extends TimeStamped {
         this.tradePost = tradePost;
         this.requester = requester;
         this.tradeStatus = TradeStatus.WAITING;
+    }
+
+    public void addCard(TradeRequestCard card) {
+        requesterCards.add(card);
     }
 
     public void complete() {

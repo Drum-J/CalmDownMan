@@ -55,6 +55,15 @@ public class AccountCard extends TimeStamped{
         return count == 0;
     }
 
+    public boolean decreaseCount(long minus) {
+        if (count < minus) {
+            throw new IllegalArgumentException("카드 수량이 부족합니다. 현재: " + count + ", 요청: " + minus);
+        }
+
+        count -= minus;
+        return count == 0;
+    }
+
     public void tradeCardCount(long count) {
         this.count += count;
     }

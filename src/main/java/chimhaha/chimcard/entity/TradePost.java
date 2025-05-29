@@ -30,12 +30,26 @@ public class TradePost extends TimeStamped {
     @OneToMany(mappedBy = "tradePost", cascade = ALL, orphanRemoval = true)
     private final List<TradePostCard> ownerCards = new ArrayList<>();
 
+    private String title;
+    private String content;
+
     @Enumerated(EnumType.STRING)
     private TradeStatus tradeStatus;
 
-    public TradePost(Account owner) {
+    public TradePost(Account owner, String title, String content) {
         this.owner = owner;
+        this.title = title;
+        this.content = content;
         this.tradeStatus = TradeStatus.WAITING;
+    }
+
+    public void addCard(TradePostCard card) {
+        ownerCards.add(card);
+    }
+
+    public void update(String title, String content) {
+        this.title = title;
+        this.content = content;
     }
 
     public void complete() {

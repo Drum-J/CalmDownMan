@@ -31,5 +31,7 @@ public class TradePostCard extends TimeStamped {
         this.tradePost = tradePost;
         this.card = card;
         this.count = count;
+
+        tradePost.addCard(this);
     }
 }
