@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
@@ -57,6 +59,17 @@ public class Account extends TimeStamped {
 
     public void updateToken(String refreshToken) {
         this.refreshToken = refreshToken;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof Account account)) return false;
+        return Objects.equals(id, account.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 
     @Override

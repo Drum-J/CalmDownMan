@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.FetchType.LAZY;
 import static jakarta.persistence.GenerationType.IDENTITY;
@@ -48,6 +50,17 @@ public class Card extends TimeStamped {
         this.attackType = attackType;
         this.grade = grade;
         this.power = power;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof Card card)) return false;
+        return Objects.equals(id, card.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 
     @Override

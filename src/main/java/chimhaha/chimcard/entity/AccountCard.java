@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 import static jakarta.persistence.FetchType.LAZY;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
@@ -46,10 +48,16 @@ public class AccountCard extends TimeStamped{
         this.count = count;
     }
 
+    /** Deprecated: test code와 운영 로직의 변경으로 인해 추후 삭제 예정 */
     public void increaseCount() {
         this.count++;
     }
 
+    public void increaseCount(long count) {
+        this.count += count;
+    }
+
+    /** Deprecated: test code와 운영 로직의 변경으로 인해 추후 삭제 예정 */
     public boolean decreaseCount() {
         this.count--;
         return count == 0;
@@ -66,5 +74,16 @@ public class AccountCard extends TimeStamped{
 
     public void tradeCardCount(long count) {
         this.count += count;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof AccountCard that)) return false;
+        return Objects.equals(account, that.account) && Objects.equals(card, that.card);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(account, card);
     }
 }
