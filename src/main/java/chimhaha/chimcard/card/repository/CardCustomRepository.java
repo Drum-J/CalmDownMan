@@ -3,6 +3,7 @@ package chimhaha.chimcard.card.repository;
 import chimhaha.chimcard.card.dto.MyCardDetailDto;
 import chimhaha.chimcard.card.dto.QMyCardDetailDto;
 import chimhaha.chimcard.entity.Account;
+import chimhaha.chimcard.entity.AccountCard;
 import chimhaha.chimcard.entity.Card;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 import static chimhaha.chimcard.entity.QAccount.account;
 import static chimhaha.chimcard.entity.QAccountCard.accountCard;
@@ -66,6 +68,16 @@ public class CardCustomRepository {
                                 .from(accountCard)
                                 .where(accountCard.card().id.eq(id))
                 ))
+                .fetch();
+    }
+
+    public List<AccountCard> getMyCardByCardIds(Long accountId, Set<Long> cardIds) {
+        return query
+                .selectFrom(accountCard)
+                .where(
+                        accountCard.account().id.eq(accountId),
+                        accountCard.card().id.in(cardIds)
+                )
                 .fetch();
     }
 }
