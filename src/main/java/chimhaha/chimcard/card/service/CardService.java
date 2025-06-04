@@ -8,12 +8,14 @@ import chimhaha.chimcard.card.repository.CardSeasonRepository;
 import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.user.repository.AccountRepository;
+import chimhaha.chimcard.utils.CardUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -59,19 +61,32 @@ public class CardService {
                 .stream().collect(Collectors.groupingBy(Card::getGrade));
 
         List<Card> drawnCards = new ArrayList<>();
-        List<AccountCard> insertList = new ArrayList<>();
-        Random random = new Random();
-
         for (int i = 0; i < 3; i++) {
-            Card drawnCard = cardDrawService.draw(map, random, seasonId);
-            drawnCards.add(drawnCard);
+            drawnCards.add(cardDrawService.draw(map, new Random(), seasonId));
+        }
 
-            Optional<AccountCard> findCard = accountCardRepository.findByAccountAndCard(account, drawnCard);
-            if (findCard.isPresent()) {
-                findCard.get().increaseCount(); // 중복 카드일 경우 갯수 업데이트
+        // 뽑은 카드 - 갯수 Map
+        Map<Card, Long> drawnCardMap = CardUtils.cardCountMap(drawnCards);
+        // 뽑은 카드 id를 사용해 내가 가진 카드 조회
+        List<AccountCard> accountCards = cardCustomRepository.getMyCardByCardIds(
+                accountId, drawnCardMap.keySet().stream().map(Card::getId).collect(Collectors.toSet()));
+        // 내가 가진 Card - AccountCard Map
+        Map<Card, AccountCard> accountCardMap = CardUtils.accountCardMapCard(accountCards);
+
+        List<AccountCard> insertList = new ArrayList<>();
+        for (Map.Entry<Card, Long> entry : drawnCardMap.entrySet()) {
+            Card card = entry.getKey();
+            Long count = entry.getValue();
+
+            AccountCard accountCard = accountCardMap.get(card);
+
+            if (accountCard == null) {
+                accountCard = new AccountCard(account, card, count);
             } else {
-                insertList.add(new AccountCard(account, drawnCard));
+                accountCard.increaseCount(count);
             }
+
+            insertList.add(accountCard); // 새 카드와 중복 카드 모두 list 저장
         }
 
         accountCardRepository.saveAll(insertList); // 뽑은 카드 일괄 저장

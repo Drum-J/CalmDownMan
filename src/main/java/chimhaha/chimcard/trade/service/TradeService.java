@@ -10,6 +10,7 @@ import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.trade.dto.TradePostCardRequestDto;
 import chimhaha.chimcard.trade.repository.TradePostRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
+import chimhaha.chimcard.utils.CardUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,10 +37,10 @@ public class TradeService {
         Account owner = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
 
-        Map<Long, Long> cardCountMap = cardCountMap(dto.cardIds());
+        Map<Long, Long> cardCountMap = CardUtils.cardCountMap(dto.cardIds());
 
         List<AccountCard> accountCards = cardCustomRepository.getMyCardByCardIds(accountId, cardCountMap.keySet());
-        Map<Long, AccountCard> ownerCardMap = accountCardMap(accountCards);
+        Map<Long, AccountCard> ownerCardMap = CardUtils.accountCardMapLong(accountCards);
 
         TradePost tradePost = new TradePost(owner, dto.title(), dto.content());
 
@@ -60,13 +61,5 @@ public class TradeService {
         }
 
         tradePostRepository.save(tradePost);
-    }
-
-    private Map<Long, Long> cardCountMap(List<Long> cardIds) {
-        return cardIds.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
-    }
-
-    private Map<Long, AccountCard> accountCardMap(List<AccountCard> accountCards) {
-        return accountCards.stream().collect(Collectors.toMap(ac -> ac.getCard().getId(), Function.identity()));
     }
 }
