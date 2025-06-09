@@ -91,6 +91,7 @@ public class AccountCardQueryTest extends QueryDslTest {
                         accountCard.card().attackType.stringValue(),
                         accountCard.card().grade,
                         accountCard.card().power,
+                        accountCard.card().imageUrl,
                         accountCard.card().cardSeason().seasonName,
                         accountCard.count
                 ))

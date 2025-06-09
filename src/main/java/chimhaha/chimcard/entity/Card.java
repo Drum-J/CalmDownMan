@@ -33,15 +33,18 @@ public class Card extends TimeStamped {
 
     private int power;
 
+    private String imageUrl;
+
     @ManyToOne(fetch = LAZY)
     private CardSeason cardSeason;
 
     @Builder
-    public Card(String title, AttackType attackType, Grade grade, int power, CardSeason cardSeason) {
+    public Card(String title, AttackType attackType, Grade grade, int power,String imageUrl, CardSeason cardSeason) {
         this.title = title;
         this.attackType = attackType;
         this.grade = grade;
         this.power = power;
+        this.imageUrl = imageUrl;
         this.cardSeason = cardSeason;
     }
 

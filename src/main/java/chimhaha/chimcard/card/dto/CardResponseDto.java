@@ -11,6 +11,7 @@ public class CardResponseDto {
     private final String attackType;
     private final Grade grade;
     private final int power;
+    private final String imageUrl;
     private final String cardSeason;
 
     public CardResponseDto(Card card) {
@@ -19,6 +20,7 @@ public class CardResponseDto {
         this.attackType = card.getAttackType().getType();
         this.grade = card.getGrade();
         this.power = card.getPower();
+        this.imageUrl = card.getImageUrl();
         this.cardSeason = card.getCardSeason().getSeasonName();
     }
 }

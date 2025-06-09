@@ -32,6 +32,7 @@ public class CardCustomRepository {
                         accountCard.card().attackType.stringValue(),
                         accountCard.card().grade,
                         accountCard.card().power,
+                        accountCard.card().imageUrl,
                         accountCard.card().cardSeason().seasonName,
                         accountCard.count
                 ))
