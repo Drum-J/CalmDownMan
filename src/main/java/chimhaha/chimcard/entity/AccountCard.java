@@ -72,10 +72,6 @@ public class AccountCard extends TimeStamped{
         return count == 0;
     }
 
-    public void tradeCardCount(long count) {
-        this.count += count;
-    }
-
     @Override
     public boolean equals(Object object) {
         if (!(object instanceof AccountCard that)) return false;

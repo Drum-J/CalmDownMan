@@ -186,7 +186,7 @@ public class CardTradeTest extends QueryDslTest {
             AccountCard accountCard = accountCardMap.get(accountCardKey); // 이미 소유한 카드인지 확인
 
             if (accountCard != null) {
-                accountCard.tradeCardCount(count); // 교환 갯수만큼 수량 증가
+                accountCard.increaseCount(count); // 교환 갯수만큼 수량 증가
             } else {
                 // map에서 accountCardKey에 해당하는 데이터가 없다면 null이 넘어옴
                 // 유저가 해당 카드를 소유하고 있지 않다는 뜻
