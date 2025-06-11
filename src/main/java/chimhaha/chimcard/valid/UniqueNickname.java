@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UniqueNickname {
 
-    String message() default "이미 사용 중인 닉네임입니다.";
+    String message() default "existsNickname";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }
