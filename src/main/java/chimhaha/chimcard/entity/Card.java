@@ -1,10 +1,6 @@
 package chimhaha.chimcard.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +29,7 @@ public class Card extends TimeStamped {
 
     private int power;
 
+    @Column(length = 500)
     private String imageUrl;
 
     @ManyToOne(fetch = LAZY)
