@@ -42,8 +42,8 @@ public class CardReadController {
 
     @GetMapping("/seasons")
     public ApiResponse<List<CardSeasonResponseDto>> getCardSeasons() {
-        List<CardSeasonResponseDto> list = cardService.getCardSeasons().stream().map(
-                s -> new CardSeasonResponseDto(s.getSeasonName(), s.getImageUrl())).toList();
+        List<CardSeasonResponseDto> list = cardService.getCardSeasons()
+                .stream().map(CardSeasonResponseDto::new).toList();
 
         return ApiResponse.success(list);
     }
