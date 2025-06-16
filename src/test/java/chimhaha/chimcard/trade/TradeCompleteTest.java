@@ -48,7 +48,8 @@ public class TradeCompleteTest extends QueryDslTest {
             throw new IllegalArgumentException("교환글 작성자만 교환을 완료할 수 있습니다.");
         }
 
-        List<TradeRequest> allRequests = tradeRequestRepository.findByTradePost(tradePost);
+        List<TradeRequest> allRequests =
+                tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, TradeStatus.WAITING);
 
         //then
         List<TradeRequest> rejectedRequests = new ArrayList<>();

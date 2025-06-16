@@ -81,4 +81,14 @@ public class CardCustomRepository {
                 )
                 .fetch();
     }
+
+    public List<AccountCard> getMyCardByCards(Account account, Set<Card> cards) {
+        return query
+                .selectFrom(accountCard)
+                .where(
+                        accountCard.account().eq(account),
+                        accountCard.card().in(cards)
+                )
+                .fetch();
+    }
 }

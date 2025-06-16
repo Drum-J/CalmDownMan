@@ -67,31 +67,31 @@ public class CardService {
 
         // 뽑은 카드 - 갯수 Map
         Map<Card, Long> drawnCardMap = CardUtils.cardCountMap(drawnCards);
-        // 뽑은 카드 id를 사용해 내가 가진 카드 조회
-        List<AccountCard> accountCards = cardCustomRepository.getMyCardByCardIds(
-                accountId, drawnCardMap.keySet().stream().map(Card::getId).collect(Collectors.toSet()));
-        // 내가 가진 Card - AccountCard Map
+        upsertList(account, drawnCardMap);
+
+        return drawnCards;
+    }
+
+    public void upsertList(Account account, Map<Card, Long> cardMap) {
+        List<AccountCard> accountCards = cardCustomRepository.getMyCardByCards(account, cardMap.keySet());
         Map<Card, AccountCard> accountCardMap = CardUtils.accountCardMapCard(accountCards);
 
-        List<AccountCard> insertList = new ArrayList<>();
-        for (Map.Entry<Card, Long> entry : drawnCardMap.entrySet()) {
+        List<AccountCard> upsertCards = new ArrayList<>();
+        for (Map.Entry<Card, Long> entry : cardMap.entrySet()) {
             Card card = entry.getKey();
             Long count = entry.getValue();
 
             AccountCard accountCard = accountCardMap.get(card);
-
             if (accountCard == null) {
                 accountCard = new AccountCard(account, card, count);
             } else {
                 accountCard.increaseCount(count);
             }
 
-            insertList.add(accountCard); // 새 카드와 중복 카드 모두 list 저장
+            upsertCards.add(accountCard);
         }
 
-        accountCardRepository.saveAll(insertList); // 뽑은 카드 일괄 저장
-
-        return drawnCards;
+        accountCardRepository.saveAll(upsertCards);
     }
 
     public List<MyCardDetailDto> getMyCards(Long accountId, Long cardSeasonId) {

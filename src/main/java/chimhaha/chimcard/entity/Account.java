@@ -62,6 +62,10 @@ public class Account extends TimeStamped {
         this.refreshToken = refreshToken;
     }
 
+    public boolean equals(Long accountId) {
+        return Objects.equals(id, accountId);
+    }
+
     @Override
     public boolean equals(Object object) {
         if (!(object instanceof Account account)) return false;

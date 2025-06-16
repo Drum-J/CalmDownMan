@@ -57,4 +57,8 @@ public class TradeRequest extends TimeStamped {
     public void reject(){
         this.tradeStatus = TradeStatus.REJECTED;
     }
+
+    public boolean isWaiting() {
+        return tradeStatus == TradeStatus.WAITING;
+    }
 }

@@ -59,4 +59,12 @@ public class TradePost extends TimeStamped {
     public void cancel() {
         this.tradeStatus = TradeStatus.CANCEL;
     }
+
+    public boolean isWaiting() {
+        return tradeStatus == TradeStatus.WAITING;
+    }
+
+    public boolean isOwner(Long ownerId) {
+        return owner.equals(ownerId);
+    }
 }
