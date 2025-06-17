@@ -15,8 +15,9 @@ public class CookieUtils {
         return ResponseCookie.from(REFRESH_TOKEN, refreshToken)
                 .path("/api/token") // 이 경로로 요청할 때 쿠키 자동 전송
                 .httpOnly(true) // JS 접근 불가
-                .secure(true) // HTTPS 환경에서만 쿠키 전송
-                .sameSite(STRICT.attributeValue()) // 다른 사이트에서 오는 요청(CSRF)에는 쿠키를 전송하지 않음
+                .secure(false) // HTTPS 환경에서만 쿠키 전송
+//                .sameSite(STRICT.attributeValue()) // 다른 사이트에서 오는 요청(CSRF)에는 쿠키를 전송하지 않음
+                .sameSite("Lax")
                 .maxAge(Duration.ofDays(7)) // 수명
                 .build();
     }
