@@ -1,7 +1,9 @@
 package chimhaha.chimcard.trade.controller;
 
+import chimhaha.chimcard.common.ApiResponse;
 import chimhaha.chimcard.trade.dto.TradePostCreateDto;
 import chimhaha.chimcard.trade.dto.TradeRequestCreateDto;
+import chimhaha.chimcard.trade.dto.TradeStatusRequestDto;
 import chimhaha.chimcard.trade.service.TradeService;
 import chimhaha.chimcard.utils.AccountUtils;
 import lombok.RequiredArgsConstructor;
@@ -19,19 +21,32 @@ public class TradeController {
     private final TradeService tradeService;
 
     @PostMapping("/post")
-    public void tradePost(@RequestBody TradePostCreateDto dto) {
+    public ApiResponse<String> tradePost(@RequestBody TradePostCreateDto dto) {
         Long accountId = AccountUtils.getAccountId();
         cardCheck(dto.cardIds());
 
         tradeService.tradePost(accountId, dto);
+
+        return ApiResponse.success("교환글 등록이 완료되었습니다.");
     }
 
     @PostMapping("/request/{id}")
-    public void tradeRequest(@PathVariable("id") Long postId, @RequestBody TradeRequestCreateDto dto) {
+    public ApiResponse<String> tradeRequest(@PathVariable("id") Long postId, @RequestBody TradeRequestCreateDto dto) {
         Long requesterId = AccountUtils.getAccountId();
         cardCheck(dto.cardIds());
 
         tradeService.tradeRequest(postId, requesterId, dto);
+
+        return ApiResponse.success("교환 신청이 완료되었습니다.");
+    }
+
+    @PostMapping("/complete/{id}")
+    public ApiResponse<String> tradeComplete(@PathVariable("id") Long postId, @RequestBody TradeStatusRequestDto dto) {
+        Long ownerId = AccountUtils.getAccountId();
+
+        tradeService.tradeComplete(postId, ownerId, dto);
+
+        return ApiResponse.success("해당 사용자와 교환이 완료되었습니다.");
     }
 
     private static void cardCheck(List<Long> cards) {

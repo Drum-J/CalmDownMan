@@ -7,6 +7,7 @@ import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.trade.dto.TradePostCreateDto;
 import chimhaha.chimcard.trade.dto.TradeRequestCreateDto;
+import chimhaha.chimcard.trade.dto.TradeStatusRequestDto;
 import chimhaha.chimcard.trade.repository.TradePostRepository;
 import chimhaha.chimcard.trade.repository.TradeRequestRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
@@ -79,7 +80,7 @@ public class TradeService {
     }
 
     @Transactional
-    public void tradeComplete(Long postId, Long ownerId, Long requesterId) {
+    public void tradeComplete(Long postId, Long ownerId, TradeStatusRequestDto dto) {
         // 교환글 조회
         TradePost tradePost = tradePostRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("해당 교환글을 찾을 수 없습니다."));
@@ -94,7 +95,7 @@ public class TradeService {
         }
 
         // 교환 신청 조회
-        TradeRequest tradeRequest = tradeRequestRepository.findById(requesterId)
+        TradeRequest tradeRequest = tradeRequestRepository.findById(dto.requestId())
                 .orElseThrow(() -> new ResourceNotFoundException("해당 교환 신청을 찾을 수 없습니다."));
 
         // 교환 신청 검증
@@ -111,7 +112,7 @@ public class TradeService {
 
         // 교환되지 않은 카드 복구
         List<TradeRequest> allRequests = tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, TradeStatus.WAITING);
-        allRequests.stream().filter(request -> !request.getId().equals(requesterId))
+        allRequests.stream().filter(request -> !request.getId().equals(dto.requestId()))
                 .forEach(request -> {
                     // 카드 조회
                     Map<Card, Long> requestCardMap = request.getRequesterCards().stream()
@@ -174,7 +175,6 @@ public class TradeService {
             tradePost.complete();
             tradeRequest.complete();
         } catch (Exception e) {
-            log.error("카드 교환 중 에러", e);
             throw new IllegalStateException("카드 교환 중 에러가 발생했습니다.");
         }
     }
