@@ -20,10 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import static chimhaha.chimcard.utils.CardUtils.accountCardMapLong;
-import static chimhaha.chimcard.utils.CardUtils.cardCountMap;
+import static chimhaha.chimcard.common.MessageConstants.*;
+import static chimhaha.chimcard.utils.CardUtils.*;
 
 @Slf4j
 @Service
@@ -41,7 +40,6 @@ public class TradeService {
     @Transactional
     public void tradePost(Long accountId, TradePostCreateDto dto) {
         Account owner = getAccount(accountId);
-
         Map<Card, Long> cardMap = checkAndUpdateCard(accountId, dto.cardIds());
 
         TradePost tradePost = new TradePost(owner, dto.title(), dto.content());
@@ -54,20 +52,14 @@ public class TradeService {
 
     @Transactional
     public void tradeRequest(Long postId, Long requesterId, TradeRequestCreateDto dto) {
-        TradePost tradePost = tradePostRepository.findById(postId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 교환글을 찾을 수 없습니다."));
-
-        if (!tradePost.isWaiting()) {
-            throw new IllegalArgumentException("교환 대기 중인 글에만 신청할 수 있습니다.");
-        }
+        TradePost tradePost = getTradePost(postId);
+        tradePost.isWaiting();
 
         if (tradePost.isOwner(requesterId)) {
             throw new IllegalArgumentException("본인의 교환글에는 신청할 수 없습니다.");
         }
 
-        Account requester = accountRepository.findById(requesterId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
-
+        Account requester = getAccount(requesterId);
         Map<Card, Long> cardMap = checkAndUpdateCard(requesterId, dto.cardIds());
 
         TradeRequest tradeRequest = new TradeRequest(tradePost, requester);
@@ -81,41 +73,21 @@ public class TradeService {
     @Transactional
     public void tradeComplete(Long postId, Long ownerId, TradeStatusRequestDto dto) {
         // 교환글 조회
-        TradePost tradePost = tradePostRepository.findById(postId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 교환글을 찾을 수 없습니다."));
-
-        // 교환글 검증
-        if (!tradePost.isOwner(ownerId)) {
-            throw new AccessDeniedException("교환글 작성자만 교환을 완료할 수 있습니다.");
-        }
-
-        if (!tradePost.isWaiting()) {
-            throw new IllegalArgumentException("대기 중인 교환글만 완료할 수 있습니다.");
-        }
+        TradePost tradePost = isTradeOwner(postId, ownerId);
+        tradePost.isWaiting();
 
         // 교환 신청 조회
-        TradeRequest tradeRequest = tradeRequestRepository.findById(dto.requestId())
-                .orElseThrow(() -> new ResourceNotFoundException("해당 교환 신청을 찾을 수 없습니다."));
-
-        // 교환 신청 검증
-        if (!tradeRequest.getTradePost().getId().equals(postId)) {
-            throw new IllegalArgumentException("해당 교환글의 신청이 아닙니다.");
-        }
-
-        if (!tradeRequest.isWaiting()) {
-            throw new IllegalStateException("대기 중인 신청만 선택할 수 있습니다.");
-        }
+        TradeRequest tradeRequest = isCorrectRequest(postId, dto);
 
         // 교환 실행
         complete(tradePost, tradeRequest);
 
-        // 교환되지 않은 카드 복구
+        // 교환되지 않은 카드 복구 TODO: 비동기 처리 고려
         List<TradeRequest> allRequests = tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, TradeStatus.WAITING);
         allRequests.stream().filter(request -> !request.getId().equals(dto.requestId()))
                 .forEach(request -> {
                     // 카드 조회
-                    Map<Card, Long> requestCardMap = request.getRequesterCards().stream()
-                            .collect(Collectors.toMap(TradeRequestCard::getCard, TradeRequestCard::getCount));
+                    Map<Card, Long> requestCardMap = getRequestCards(request);
 
                     // 카드 복구
                     cardService.upsertList(request.getRequester(), requestCardMap);
@@ -123,6 +95,89 @@ public class TradeService {
                     // 상태 변경
                     request.reject();
                 });
+    }
+
+    @Transactional
+    public void tradeReject(Long postId, Long ownerId, TradeStatusRequestDto dto) {
+        isTradeOwner(postId, ownerId);
+
+        TradeRequest tradeRequest = isCorrectRequest(postId, dto);
+        Map<Card, Long> cardMap = getRequestCards(tradeRequest);
+
+        cardService.upsertList(tradeRequest.getRequester(), cardMap);
+        tradeRequest.reject();
+    }
+
+    @Transactional
+    public void postCancel(Long postId, Long accountId) {
+        TradePost tradePost = isTradeOwner(postId, accountId);
+        tradePost.isWaiting();
+
+        // 신청 카드 복구 TODO: 비동기 처리 고려
+        List<TradeRequest> allRequests = tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, TradeStatus.WAITING);
+        allRequests.forEach(request -> {
+            Map<Card, Long> requestCardMap = getRequestCards(request);
+
+            cardService.upsertList(request.getRequester(), requestCardMap);
+            request.cancel();
+        });
+
+        // 본인 카드 복구
+        Map<Card, Long> cardMap = getPostCards(tradePost);
+        cardService.upsertList(tradePost.getOwner(), cardMap);
+        tradePost.cancel();
+    }
+
+    @Transactional
+    public void requestCancel(Long requestId, Long accountId) {
+        TradeRequest tradeRequest = getTradeRequest(requestId);
+
+        if (!tradeRequest.getRequester().getId().equals(accountId)) {
+            throw new AccessDeniedException(NOT_TRADE_OWNER);
+        }
+
+        Map<Card, Long> cardMap = getRequestCards(tradeRequest);
+        cardService.upsertList(tradeRequest.getRequester(), cardMap);
+
+        tradeRequest.cancel();
+    }
+
+    /***** private method *****/
+    private Account getAccount(Long accountId) {
+        return accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
+    }
+
+    private TradePost getTradePost(Long postId) {
+        return tradePostRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException(TRADE_POST_NOT_FOUND));
+    }
+
+    private TradeRequest getTradeRequest(Long requestId) {
+        return tradeRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException(TRADE_REQUEST_NOT_FOUND));
+    }
+
+    private TradePost isTradeOwner(Long postId, Long ownerId) {
+        TradePost tradePost = getTradePost(postId);
+
+        if (!tradePost.isOwner(ownerId)) {
+            throw new AccessDeniedException(NOT_TRADE_OWNER);
+        }
+
+        return tradePost;
+    }
+
+    private TradeRequest isCorrectRequest(Long postId, TradeStatusRequestDto dto) {
+        TradeRequest tradeRequest = getTradeRequest(dto.requestId());
+
+        if (!tradeRequest.getTradePost().getId().equals(postId)) {
+            throw new IllegalArgumentException("해당 교환글의 신청이 아닙니다.");
+        }
+
+        tradeRequest.isWaiting();
+
+        return tradeRequest;
     }
 
     /**
@@ -160,10 +215,8 @@ public class TradeService {
         Account owner = tradePost.getOwner();
         Account requester = tradeRequest.getRequester();
 
-        Map<Card, Long> ownerCardMap = tradePost.getOwnerCards().stream()
-                .collect(Collectors.toMap(TradePostCard::getCard, TradePostCard::getCount));
-        Map<Card, Long> requestCardMap = tradeRequest.getRequesterCards().stream()
-                .collect(Collectors.toMap(TradeRequestCard::getCard, TradeRequestCard::getCount));
+        Map<Card, Long> ownerCardMap = getPostCards(tradePost);
+        Map<Card, Long> requestCardMap = getRequestCards(tradeRequest);
 
         try {
             // 카드 저장
