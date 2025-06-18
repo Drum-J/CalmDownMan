@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+import static chimhaha.chimcard.common.MessageConstants.IS_NOT_WAITING;
 import static jakarta.persistence.CascadeType.ALL;
 import static jakarta.persistence.FetchType.LAZY;
 import static jakarta.persistence.GenerationType.IDENTITY;
@@ -58,7 +59,9 @@ public class TradeRequest extends TimeStamped {
         this.tradeStatus = TradeStatus.REJECTED;
     }
 
-    public boolean isWaiting() {
-        return tradeStatus == TradeStatus.WAITING;
+    public void isWaiting() {
+        if (tradeStatus != TradeStatus.WAITING) {
+            throw new IllegalArgumentException(IS_NOT_WAITING);
+        }
     }
 }

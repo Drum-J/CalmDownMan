@@ -1,7 +1,6 @@
 package chimhaha.chimcard.utils;
 
-import chimhaha.chimcard.entity.AccountCard;
-import chimhaha.chimcard.entity.Card;
+import chimhaha.chimcard.entity.*;
 
 import java.util.List;
 import java.util.Map;
@@ -20,5 +19,15 @@ public class CardUtils {
 
     public static Map<Card, AccountCard> accountCardMapCard(List<AccountCard> accountCards) {
         return accountCards.stream().collect(Collectors.toMap(AccountCard::getCard, Function.identity()));
+    }
+
+    public static Map<Card, Long> getPostCards(TradePost tradePost) {
+        return tradePost.getOwnerCards().stream()
+                .collect(Collectors.toMap(TradePostCard::getCard, TradePostCard::getCount));
+    }
+
+    public static Map<Card, Long> getRequestCards(TradeRequest tradeRequest) {
+        return tradeRequest.getRequesterCards().stream()
+                .collect(Collectors.toMap(TradeRequestCard::getCard, TradeRequestCard::getCount));
     }
 }
