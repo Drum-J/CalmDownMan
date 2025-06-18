@@ -40,8 +40,7 @@ public class TradeService {
 
     @Transactional
     public void tradePost(Long accountId, TradePostCreateDto dto) {
-        Account owner = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
+        Account owner = getAccount(accountId);
 
         Map<Card, Long> cardMap = checkAndUpdateCard(accountId, dto.cardIds());
 

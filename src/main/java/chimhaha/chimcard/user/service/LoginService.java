@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static chimhaha.chimcard.common.MessageConstants.*;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -25,10 +27,10 @@ public class LoginService {
 
     public TokenResponseDto login(LoginRequestDto dto) {
         Account account = accountRepository.findByUsername(dto.username())
-                .orElseThrow(() -> new ResourceNotFoundException("아이디나 비밀번호가 틀렸습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(ID_OR_PASSWORD_WRONG));
 
         if (!passwordEncoder.matches(dto.password(), account.getPassword())) {
-            throw new ResourceNotFoundException("아이디나 비밀번호가 틀렸습니다.");
+            throw new ResourceNotFoundException(ID_OR_PASSWORD_WRONG);
         }
 
         TokenResponseDto token = jwtProvider.generateToken(account);
@@ -41,9 +43,7 @@ public class LoginService {
         Claims claims = jwtProvider.validateToken(refreshToken);
         Long accountId = claims.get("id", Long.class);
 
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
-
+        Account account = getAccount(accountId);
         account.updateToken(null);
     }
 
@@ -51,12 +51,16 @@ public class LoginService {
         Claims claims = jwtProvider.validateToken(refreshToken);
         Long accountId = claims.get("id", Long.class);
 
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
+        Account account = getAccount(accountId);
 
         TokenResponseDto token = jwtProvider.generateToken(account);
         account.updateToken(token.refreshToken());
 
         return token;
+    }
+
+    private Account getAccount(Long accountId) {
+        return accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
     }
 }

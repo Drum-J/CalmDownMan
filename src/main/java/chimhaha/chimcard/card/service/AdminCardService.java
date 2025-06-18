@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static chimhaha.chimcard.common.MessageConstants.*;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,7 +25,7 @@ public class AdminCardService {
     @Transactional
     public void saveCard(CardCreateDto dto) {
         CardSeason cardSeason = cardSeasonRepository.findById(dto.cardSeasonId())
-                .orElseThrow(() -> new ResourceNotFoundException("해당 시즌 카드팩은 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(CARD_SEASON_NOT_FOUND));
 
         Card card = Card.builder()
                 .title(dto.title())
@@ -39,7 +41,7 @@ public class AdminCardService {
     @Transactional
     public void updateCard(CardUpdateDto dto) {
         Card card = cardRepository.findById(dto.id())
-                .orElseThrow(() -> new ResourceNotFoundException("해당 카드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(CARD_NOT_FOUND));
 
         card.update(dto.title(), dto.power(), dto.attackType(), dto.grade());
     }

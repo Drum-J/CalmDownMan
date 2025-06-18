@@ -15,8 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static chimhaha.chimcard.common.MessageConstants.*;
 
 @Slf4j
 @Service
@@ -38,7 +39,7 @@ public class CardService {
 
     public Card getCardById(Long cardId) {
         return cardRepository.findById(cardId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 카드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(CARD_NOT_FOUND));
     }
 
     public List<CardSeason> getCardSeasons() {
@@ -47,7 +48,7 @@ public class CardService {
 
     public List<Card> getCardsBySeason(Long seasonId) {
         CardSeason cardSeason = cardSeasonRepository.findById(seasonId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 시즌 카드팩은 존재하지 않습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(CARD_SEASON_NOT_FOUND));
 
         return cardRepository.findByCardSeason(cardSeason);
     }
@@ -55,7 +56,7 @@ public class CardService {
     @Transactional
     public List<Card> cardPackOpen(Long accountId, Long seasonId) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("해당 회원을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
 
         Map<Grade, List<Card>> map = getCardsBySeason(seasonId)
                 .stream().collect(Collectors.groupingBy(Card::getGrade));

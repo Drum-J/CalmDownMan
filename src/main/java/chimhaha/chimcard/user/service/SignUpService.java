@@ -8,6 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static chimhaha.chimcard.common.MessageConstants.*;
 import static chimhaha.chimcard.entity.AccountRole.USER;
 
 @Service
@@ -34,7 +35,7 @@ public class SignUpService {
 
     public void checkUsername(String username) {
         if (accountRepository.existsByUsername(username)) {
-            throw new IllegalArgumentException("해당 ID가 이미 존재합니다.");
+            throw new IllegalArgumentException(EXIST_USERNAME);
         }
     }
 }
