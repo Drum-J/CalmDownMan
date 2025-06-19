@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import static chimhaha.chimcard.common.MessageConstants.*;
+import static chimhaha.chimcard.entity.TradeStatus.*;
 import static chimhaha.chimcard.utils.CardUtils.*;
 
 @Slf4j
@@ -36,6 +37,7 @@ public class TradeService {
     private final TradePostRepository tradePostRepository;
     private final TradeRequestRepository tradeRequestRepository;
     private final CardService cardService;
+    private final TradeAsyncService tradeAsyncService;
 
     @Transactional
     public void tradePost(Long accountId, TradePostCreateDto dto) {
@@ -82,19 +84,12 @@ public class TradeService {
         // 교환 실행
         complete(tradePost, tradeRequest);
 
-        // 교환되지 않은 카드 복구 TODO: 비동기 처리 고려
-        List<TradeRequest> allRequests = tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, TradeStatus.WAITING);
-        allRequests.stream().filter(request -> !request.getId().equals(dto.requestId()))
-                .forEach(request -> {
-                    // 카드 조회
-                    Map<Card, Long> requestCardMap = getRequestCards(request);
+        // 교환되지 않은 카드 복구 비동기 처리
+        List<TradeRequest> allRequests =
+                tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, WAITING)
+                        .stream().filter(request -> !request.getId().equals(dto.requestId())).toList();
 
-                    // 카드 복구
-                    cardService.upsertList(request.getRequester(), requestCardMap);
-
-                    // 상태 변경
-                    request.reject();
-                });
+        tradeAsyncService.asyncTrade(allRequests, REJECTED);
     }
 
     @Transactional
@@ -113,14 +108,9 @@ public class TradeService {
         TradePost tradePost = isTradeOwner(postId, accountId);
         tradePost.isWaiting();
 
-        // 신청 카드 복구 TODO: 비동기 처리 고려
-        List<TradeRequest> allRequests = tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, TradeStatus.WAITING);
-        allRequests.forEach(request -> {
-            Map<Card, Long> requestCardMap = getRequestCards(request);
-
-            cardService.upsertList(request.getRequester(), requestCardMap);
-            request.cancel();
-        });
+        // 신청 카드 복구 비동기 처리
+        List<TradeRequest> allRequests = tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, WAITING);
+        tradeAsyncService.asyncTrade(allRequests, CANCEL);
 
         // 본인 카드 복구
         Map<Card, Long> cardMap = getPostCards(tradePost);
