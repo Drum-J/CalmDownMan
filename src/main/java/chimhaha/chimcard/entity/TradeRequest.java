@@ -37,6 +37,9 @@ public class TradeRequest extends TimeStamped {
     @Enumerated(EnumType.STRING)
     private TradeStatus tradeStatus;
 
+    @Version
+    private Long version;
+
     public TradeRequest(TradePost tradePost, Account requester) {
         this.tradePost = tradePost;
         this.requester = requester;
@@ -48,14 +51,17 @@ public class TradeRequest extends TimeStamped {
     }
 
     public void complete() {
+        isWaiting();
         this.tradeStatus = TradeStatus.COMPLETED;
     }
 
     public void cancel() {
+        isWaiting();
         this.tradeStatus = TradeStatus.CANCEL;
     }
 
     public void reject(){
+        isWaiting();
         this.tradeStatus = TradeStatus.REJECTED;
     }
 

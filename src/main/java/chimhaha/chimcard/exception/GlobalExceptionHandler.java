@@ -2,6 +2,7 @@ package chimhaha.chimcard.exception;
 
 import chimhaha.chimcard.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -31,6 +32,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<String>> accessDeniedException(AccessDeniedException e) {
         return ResponseEntity.status(FORBIDDEN).body(ApiResponse.forbidden(e.getMessage()));
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<String>> optimisticLockException(OptimisticLockingFailureException e) {
+        log.error(e.getMessage(), e);
+        return ResponseEntity.status(CONFLICT).body(ApiResponse.error(e.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

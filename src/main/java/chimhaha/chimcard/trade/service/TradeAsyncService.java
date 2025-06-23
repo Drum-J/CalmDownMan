@@ -23,7 +23,7 @@ public class TradeAsyncService {
                 tradeAsyncTrxService.rollbackRequestCard(request, status); // 신청자 카드 돌려주기
             } catch (Exception e) {
                 log.error("asyncTrade error : {}", e.getMessage());
-                tradeAsyncTrxService.saveFailedRequest(request);
+                tradeAsyncTrxService.saveFailedRequest(request, status);
             }
         }
     }
