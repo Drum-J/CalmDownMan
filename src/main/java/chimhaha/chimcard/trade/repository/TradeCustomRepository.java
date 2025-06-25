@@ -1,9 +1,16 @@
 package chimhaha.chimcard.trade.repository;
 
 
+import chimhaha.chimcard.entity.Grade;
+import chimhaha.chimcard.entity.TradeStatus;
 import chimhaha.chimcard.trade.dto.*;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -21,13 +28,14 @@ public class TradeCustomRepository {
 
     private final JPAQueryFactory query;
 
-    public List<TradePostListDto> getPostList() {
-        return query
+    public Page<TradePostListDto> getPostList(PageRequest pageRequest, TradeStatus status, Grade grade) {
+        List<TradePostListDto> postList = query
                 .select(new QTradePostListDto(
                         tradePost.id,
                         tradePost.title,
                         tradePost.content,
-                        tradePost.tradeStatus.stringValue(),
+                        tradePost.tradeStatus,
+                        tradePost.grade,
                         account.username,
                         account.nickname,
                         account.profileImage,
@@ -38,8 +46,18 @@ public class TradeCustomRepository {
                     .on(tradePost.owner().eq(account))
                 .join(tradePostCard)
                     .on(tradePost.id.eq(tradePostCard.tradePost().id))
+                .where(statusEq(status), gradeEq(grade))
                 .groupBy(tradePost.id)
+                .offset(pageRequest.getOffset())
+                .limit(pageRequest.getPageSize())
+                .orderBy(tradePost.id.desc())
                 .fetch();
+
+        JPAQuery<Long> totalCount = query.select(tradePost.count())
+                .from(tradePost)
+                .where(statusEq(status), gradeEq(grade));
+
+        return PageableExecutionUtils.getPage(postList, pageRequest, totalCount::fetchOne);
     }
 
     public List<TradeCardDetailDto> getPostDetail(Long tradePostId) {
@@ -66,7 +84,7 @@ public class TradeCustomRepository {
                         account.username,
                         account.nickname,
                         account.profileImage,
-                        tradeRequest.tradeStatus.stringValue(),
+                        tradeRequest.tradeStatus,
                         tradeRequest.id.count().as("cardCount")
                 ))
                 .from(tradeRequest)
@@ -92,8 +110,16 @@ public class TradeCustomRepository {
                 ))
                 .from(tradeRequestCard)
                 .join(card)
-                .on(tradeRequestCard.card().eq(card))
+                    .on(tradeRequestCard.card().eq(card))
                 .where(tradeRequestCard.tradeRequest().id.eq(tradeRequestId))
                 .fetch();
+    }
+
+    private BooleanExpression statusEq(TradeStatus status) {
+        return status != null ? tradePost.tradeStatus.eq(status) : null;
+    }
+
+    private BooleanExpression gradeEq(Grade grade) {
+        return grade != null ? tradePost.grade.eq(grade) : null;
     }
 }
