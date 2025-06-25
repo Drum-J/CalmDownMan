@@ -45,9 +45,17 @@ public class TradeService {
         Map<Card, Long> cardMap = checkAndUpdateCard(accountId, dto.cardIds());
 
         TradePost tradePost = new TradePost(owner, dto.title(), dto.content());
+        int gradeValue = 6;
         for (Map.Entry<Card, Long> entry : cardMap.entrySet()) {
-            new TradePostCard(tradePost, entry.getKey(), entry.getValue());
+            Card card = entry.getKey();
+            new TradePostCard(tradePost, card, entry.getValue());
+
+            int cardValue = card.getGrade().getValue();
+            if (cardValue < gradeValue) {
+                gradeValue = cardValue;
+            }
         }
+        tradePost.topGrade(Grade.getEnum(gradeValue));
 
         tradePostRepository.save(tradePost);
     }

@@ -37,11 +37,19 @@ public class TradePost extends TimeStamped {
     @Enumerated(EnumType.STRING)
     private TradeStatus tradeStatus;
 
+    @Enumerated(EnumType.STRING)
+    private Grade grade;
+
     public TradePost(Account owner, String title, String content) {
         this.owner = owner;
         this.title = title;
         this.content = content;
         this.tradeStatus = TradeStatus.WAITING;
+        this.grade = null;
+    }
+
+    public void topGrade(Grade grade) {
+        this.grade = grade;
     }
 
     public void addCard(TradePostCard card) {
