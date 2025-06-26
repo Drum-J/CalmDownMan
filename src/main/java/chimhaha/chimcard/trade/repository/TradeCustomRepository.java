@@ -36,6 +36,7 @@ public class TradeCustomRepository {
                         tradePost.content,
                         tradePost.tradeStatus,
                         tradePost.grade,
+                        account.id.as("accountId"),
                         account.username,
                         account.nickname,
                         account.profileImage,

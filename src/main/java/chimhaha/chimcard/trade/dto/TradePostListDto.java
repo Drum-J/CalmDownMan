@@ -6,7 +6,7 @@ import com.querydsl.core.annotations.QueryProjection;
 
 public record TradePostListDto(
         Long tradeId, String title, String content, TradeStatus tradeStatus, Grade grade,
-        String username, String nickname, String profileImage,
+        Long accountId, String username, String nickname, String profileImage,
         Long cardCount) {
 
     @QueryProjection
