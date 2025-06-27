@@ -1,7 +1,6 @@
 package chimhaha.chimcard.querydsl;
 
 import chimhaha.chimcard.card.dto.MyCardDetailDto;
-import chimhaha.chimcard.card.dto.MyCardResponseDto;
 import chimhaha.chimcard.card.dto.QMyCardDetailDto;
 import chimhaha.chimcard.entity.Account;
 import chimhaha.chimcard.entity.AccountCard;
@@ -47,10 +46,10 @@ public class AccountCardQueryTest extends QueryDslTest {
                 .fetch(); // 쿼리 1회 실행
 
         //then
-        // accountCard를 돌면서 MyCardResponseDto 생성
+        // accountCard를 돌면서 MyCardDetailDto 생성
         // Card와 CardSeason의 FetchType 이 LAZY Loading 이기 때문에 stream 에서 여러개의 쿼리가 실행됨.
-        List<MyCardResponseDto> list = result.stream().map(
-                ac -> new MyCardResponseDto(ac.getCard(), ac.getCount())).toList(); // 쿼리 25회 실행
+        List<MyCardDetailDto> list = result.stream().map(
+                ac -> new MyCardDetailDto(ac.getCard(), ac.getCount())).toList(); // 쿼리 25회 실행
         // select * from card 23회 / select * from card_season 2회
 
         System.out.println(list);
@@ -68,9 +67,9 @@ public class AccountCardQueryTest extends QueryDslTest {
                 .fetch(); // 쿼리 1회 실행
 
         //then
-        // accountCard를 돌면서 MyCardResponseDto 생성
-        List<MyCardResponseDto> list = result.stream().map(
-                ac -> new MyCardResponseDto(ac.getCard(), ac.getCount())).toList(); // 쿼리 25회 실행
+        // accountCard를 돌면서 MyCardDetailDto 생성
+        List<MyCardDetailDto> list = result.stream().map(
+                ac -> new MyCardDetailDto(ac.getCard(), ac.getCount())).toList(); // 쿼리 25회 실행
         // select * from card 23회 / select * from card_season 2회
 
         System.out.println(list.size());
