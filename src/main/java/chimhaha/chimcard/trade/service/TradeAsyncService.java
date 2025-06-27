@@ -20,10 +20,10 @@ public class TradeAsyncService {
     public void asyncTrade(List<TradeRequest> allRequests, TradeStatus status) {
         for (TradeRequest request : allRequests) {
             try {
-                tradeAsyncTrxService.rollbackRequestCard(request, status); // 신청자 카드 돌려주기
+                tradeAsyncTrxService.rollbackRequestCard(request.getId(), status); // 신청자 카드 돌려주기
             } catch (Exception e) {
-                log.error("asyncTrade error : {}", e.getMessage());
-                tradeAsyncTrxService.saveFailedRequest(request, status);
+                log.error("asyncTrade error: ", e);
+                tradeAsyncTrxService.saveFailedRequest(request.getId(), status);
             }
         }
     }
