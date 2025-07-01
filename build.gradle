@@ -53,6 +53,10 @@ dependencies {
 
     // p6spy
     implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.1'
+
+    //AWS 추가
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter:3.4.0'
+    implementation 'software.amazon.awssdk:s3:2.31.73'
 }
 
 tasks.named('test') {
