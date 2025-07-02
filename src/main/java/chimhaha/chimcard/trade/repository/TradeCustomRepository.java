@@ -5,6 +5,7 @@ import chimhaha.chimcard.entity.Grade;
 import chimhaha.chimcard.entity.TradeStatus;
 import chimhaha.chimcard.trade.dto.*;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,8 @@ public class TradeCustomRepository {
 
     private final JPAQueryFactory query;
 
-    public Page<TradePostListDto> getPostList(PageRequest pageRequest, TradeStatus status, Grade grade) {
+    public Page<TradePostListDto> getPostList(PageRequest pageRequest, TradeStatus status, Grade grade,
+                                              Long ownerId, Long requesterId) {
         List<TradePostListDto> postList = query
                 .select(new QTradePostListDto(
                         tradePost.id,
@@ -47,7 +49,11 @@ public class TradeCustomRepository {
                     .on(tradePost.owner().eq(account))
                 .join(tradePostCard)
                     .on(tradePost.id.eq(tradePostCard.tradePost().id))
-                .where(statusEq(status), gradeEq(grade))
+                .where(
+                        statusEq(status), gradeEq(grade),
+                        ownerEq(ownerId),
+                        postInByRequester(requesterId)
+                )
                 .groupBy(tradePost.id)
                 .offset(pageRequest.getOffset())
                 .limit(pageRequest.getPageSize())
@@ -56,7 +62,11 @@ public class TradeCustomRepository {
 
         JPAQuery<Long> totalCount = query.select(tradePost.count())
                 .from(tradePost)
-                .where(statusEq(status), gradeEq(grade));
+                .where(
+                        statusEq(status), gradeEq(grade),
+                        ownerEq(ownerId),
+                        postInByRequester(requesterId)
+                );
 
         return PageableExecutionUtils.getPage(postList, pageRequest, totalCount::fetchOne);
     }
@@ -122,5 +132,18 @@ public class TradeCustomRepository {
 
     private BooleanExpression gradeEq(Grade grade) {
         return grade != null ? tradePost.grade.eq(grade) : null;
+    }
+
+    private BooleanExpression ownerEq(Long ownerId) {
+        return ownerId != null ? tradePost.owner().id.eq(ownerId) : null;
+    }
+
+    private BooleanExpression postInByRequester(Long requesterId) {
+        return requesterId != null ?
+                tradePost.id.in(JPAExpressions
+                        .select(tradeRequest.tradePost().id).distinct()
+                        .from(tradeRequest)
+                        .where(tradeRequest.requester().id.eq(requesterId)))
+                : null;
     }
 }

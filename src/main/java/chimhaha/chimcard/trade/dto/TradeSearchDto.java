@@ -14,6 +14,8 @@ public class TradeSearchDto {
     private int size = 10;
     private String status = "ALL";
     private int grade = 10;
+    private Long ownerId;
+    private Long requesterId;
 
     public PageRequest toPageRequest() {
         return PageRequest.of(page, size);

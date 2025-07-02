@@ -22,7 +22,8 @@ public class TradeViewService {
     private final TradeCustomRepository tradeCustomRepository;
 
     public Page<TradePostListDto> getPostList(TradeSearchDto dto) {
-        return tradeCustomRepository.getPostList(dto.toPageRequest(), dto.toStatus(), dto.toGrade());
+        return tradeCustomRepository.getPostList(dto.toPageRequest(), dto.toStatus(), dto.toGrade(),
+                dto.getOwnerId(), dto.getRequesterId());
     }
 
     public List<TradeCardDetailDto> getPostDetail(Long tradePostId) {
