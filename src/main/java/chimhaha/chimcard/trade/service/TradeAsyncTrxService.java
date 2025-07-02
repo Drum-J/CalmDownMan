@@ -31,13 +31,17 @@ public class TradeAsyncTrxService {
 
     public void rollbackRequestCard(Long requestId, TradeStatus status) {
         log.info("rollbackRequestCard Async Thread : [{}] {}, {}",Thread.currentThread().getName(), requestId, status);
-        TradeRequest request = getTradeRequest(requestId);
-        Map<Card, Long> requestCardMap = getRequestCards(request);
-        cardService.upsertList(request.getRequester(), requestCardMap);
+        try {
+            TradeRequest request = getTradeRequest(requestId);
+            switch (status) {
+                case REJECTED -> request.reject();
+                case CANCEL -> request.cancel();
+            }
 
-        switch (status) {
-            case REJECTED -> request.reject();
-            case CANCEL -> request.cancel();
+            Map<Card, Long> requestCardMap = getRequestCards(request);
+            cardService.upsertList(request.getRequester(), requestCardMap);
+        } catch (IllegalArgumentException e) {
+            log.warn("request is not waiting status : [{}] ", requestId);
         }
     }
 
@@ -50,9 +54,7 @@ public class TradeAsyncTrxService {
     }
 
     private TradeRequest getTradeRequest(Long requestId) {
-        TradeRequest request = requestRepository.findById(requestId)
+        return requestRepository.findById(requestId)
                 .orElseThrow(()-> new ResourceNotFoundException(TRADE_REQUEST_NOT_FOUND));
-        request.isWaiting();
-        return request;
     }
 }

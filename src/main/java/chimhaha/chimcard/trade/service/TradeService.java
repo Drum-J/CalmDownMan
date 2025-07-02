@@ -8,11 +8,16 @@ import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.trade.dto.TradePostCreateDto;
 import chimhaha.chimcard.trade.dto.TradeRequestCreateDto;
 import chimhaha.chimcard.trade.dto.TradeStatusRequestDto;
+import chimhaha.chimcard.trade.event.TradeCompleteOrCancelEvent;
 import chimhaha.chimcard.trade.repository.TradePostRepository;
 import chimhaha.chimcard.trade.repository.TradeRequestRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +29,7 @@ import java.util.Map;
 import static chimhaha.chimcard.common.MessageConstants.*;
 import static chimhaha.chimcard.entity.TradeStatus.*;
 import static chimhaha.chimcard.utils.CardUtils.*;
+import static chimhaha.chimcard.common.PointConstants.POINT_OF_TRADE_COMPLETE;
 
 @Slf4j
 @Service
@@ -37,7 +43,7 @@ public class TradeService {
     private final TradePostRepository tradePostRepository;
     private final TradeRequestRepository tradeRequestRepository;
     private final CardService cardService;
-    private final TradeAsyncService tradeAsyncService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void tradePost(Long accountId, TradePostCreateDto dto) {
@@ -80,6 +86,10 @@ public class TradeService {
         tradeRequestRepository.save(tradeRequest);
     }
 
+    @Retryable(
+            retryFor = {OptimisticLockingFailureException.class},
+            backoff = @Backoff(delay = 100)
+    )
     @Transactional
     public void tradeComplete(Long postId, Long ownerId, TradeStatusRequestDto dto) {
         // 교환글 조회
@@ -97,7 +107,9 @@ public class TradeService {
                 tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, WAITING)
                         .stream().filter(request -> !request.getId().equals(dto.requestId())).toList();
 
-        tradeAsyncService.asyncTrade(allRequests, REJECTED);
+        if (!allRequests.isEmpty()) {
+            eventPublisher.publishEvent(new TradeCompleteOrCancelEvent(allRequests, REJECTED));
+        }
     }
 
     @Transactional
@@ -111,19 +123,25 @@ public class TradeService {
         tradeRequest.reject();
     }
 
+    @Retryable(
+            retryFor = {OptimisticLockingFailureException.class},
+            backoff = @Backoff(delay = 100)
+    )
     @Transactional
     public void postCancel(Long postId, Long accountId) {
         TradePost tradePost = isTradeOwner(postId, accountId);
         tradePost.isWaiting();
 
-        // 신청 카드 복구 비동기 처리
-        List<TradeRequest> allRequests = tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, WAITING);
-        tradeAsyncService.asyncTrade(allRequests, CANCEL);
-
         // 본인 카드 복구
         Map<Card, Long> cardMap = getPostCards(tradePost);
         cardService.upsertList(tradePost.getOwner(), cardMap);
         tradePost.cancel();
+
+        // 신청 카드 복구 비동기 처리
+        List<TradeRequest> allRequests = tradeRequestRepository.findByTradePostAndTradeStatus(tradePost, WAITING);
+        if (!allRequests.isEmpty()) {
+            eventPublisher.publishEvent(new TradeCompleteOrCancelEvent(allRequests, CANCEL));
+        }
     }
 
     @Transactional
@@ -224,6 +242,10 @@ public class TradeService {
             // 교환 상태 변경
             tradePost.complete();
             tradeRequest.complete();
+
+            // 교환 성공 포인트 지급
+            owner.increasePoint(POINT_OF_TRADE_COMPLETE);
+            requester.increasePoint(POINT_OF_TRADE_COMPLETE);
         } catch (Exception e) {
             throw new IllegalStateException("카드 교환 중 에러가 발생했습니다.");
         }

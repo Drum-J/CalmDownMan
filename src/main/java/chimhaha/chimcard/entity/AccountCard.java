@@ -38,6 +38,9 @@ public class AccountCard extends TimeStamped{
 
     private long count; // 카드 갯수
 
+    @Version
+    private Long version;
+
     public AccountCard(Account account, Card card) {
         this(account, card, 1);
     }
