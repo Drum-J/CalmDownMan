@@ -25,6 +25,7 @@ public class Account extends TimeStamped {
     private String username;
     private String password;
     private String nickname;
+    private Integer point;
     private String profileImage;
     @Column(length = 500)
     private String refreshToken;
@@ -32,11 +33,15 @@ public class Account extends TimeStamped {
     @Enumerated(value = STRING)
     private AccountRole role;
 
+    @Version
+    private Long version;
+
     @Builder
-    public Account(String username, String password, String nickname, AccountRole role) {
+    public Account(String username, String password, String nickname,Integer point, AccountRole role) {
         this.username = username;
         this.password = password;
         this.nickname = nickname;
+        this.point = point;
         this.role = role;
         this.profileImage = null;
         this.refreshToken = null;
@@ -60,6 +65,18 @@ public class Account extends TimeStamped {
 
     public void updateToken(String refreshToken) {
         this.refreshToken = refreshToken;
+    }
+
+    public void increasePoint(int plus) {
+        point += plus;
+    }
+
+    public void decreasePoint(int minus) {
+        if (point < minus) {
+            throw new IllegalArgumentException("보유 포인트가 부족합니다.");
+        }
+
+        point -= minus;
     }
 
     public boolean equals(Long accountId) {

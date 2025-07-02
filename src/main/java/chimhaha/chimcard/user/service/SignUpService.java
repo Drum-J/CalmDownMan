@@ -27,6 +27,7 @@ public class SignUpService {
                 .username(dto.getUsername())
                 .nickname(dto.getNickname())
                 .password(passwordEncoder.encode(dto.getPassword()))
+                .point(1000)
                 .role(USER)
                 .build();
 

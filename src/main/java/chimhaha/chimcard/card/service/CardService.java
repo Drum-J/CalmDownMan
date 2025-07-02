@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static chimhaha.chimcard.common.MessageConstants.*;
+import static chimhaha.chimcard.common.PointConstants.POINT_OF_CARD_OPEN;
 
 @Slf4j
 @Service
@@ -57,6 +58,7 @@ public class CardService {
     public List<Card> cardPackOpen(Long accountId, Long seasonId) {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
+        account.decreasePoint(POINT_OF_CARD_OPEN);
 
         Map<Grade, List<Card>> map = getCardsBySeason(seasonId)
                 .stream().collect(Collectors.groupingBy(Card::getGrade));
