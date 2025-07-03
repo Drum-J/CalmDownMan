@@ -78,6 +78,8 @@ public class TradeConcurrencyBase {
         requestB = tradeRequestRepository.findByRequester(userB).getFirst();
         requestC = tradeRequestRepository.findByRequester(userC).getFirst();
         requestD = tradeRequestRepository.findByRequester(userD).getFirst();
+
+        log.info("setUp() - end");
     }
 
     protected Account makeAccount(String username) {
