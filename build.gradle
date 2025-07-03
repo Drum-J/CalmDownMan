@@ -60,6 +60,9 @@ dependencies {
 
     // spring retry
     implementation 'org.springframework.retry:spring-retry'
+
+    // h2 DB 추가
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {
