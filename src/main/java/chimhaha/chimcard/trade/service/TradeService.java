@@ -112,6 +112,10 @@ public class TradeService {
         }
     }
 
+    @Retryable(
+            retryFor = {OptimisticLockingFailureException.class},
+            backoff = @Backoff(delay = 100)
+    )
     @Transactional
     public void tradeReject(Long postId, Long ownerId, TradeStatusRequestDto dto) {
         isTradeOwner(postId, ownerId);

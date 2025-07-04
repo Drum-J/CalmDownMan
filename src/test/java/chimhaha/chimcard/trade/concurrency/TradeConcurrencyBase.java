@@ -57,8 +57,8 @@ public class TradeConcurrencyBase {
 
         // 사용자 - 카드 세팅
         accountCardRepository.save(new AccountCard(owner, ownerCard));
-        accountCardRepository.save(new AccountCard(userB, userBCard, 2));
-        accountCardRepository.save(new AccountCard(userC, userCCard, 3)); // 사용자 C는 3장의 중복 카드를 가지고 있다.
+        accountCardRepository.save(new AccountCard(userB, userBCard));
+        accountCardRepository.save(new AccountCard(userC, userCCard));
         accountCardRepository.save(new AccountCard(userD, userDCard));
 
         // 교환글 등록

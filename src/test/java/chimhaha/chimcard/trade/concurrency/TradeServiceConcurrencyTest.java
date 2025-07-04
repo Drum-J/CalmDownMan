@@ -223,13 +223,17 @@ public class TradeServiceConcurrencyTest extends TradeConcurrencyBase {
     @DisplayName("사용자 C의 여러 동시성 문제")
     void manyConcurrencyUserC() throws Exception {
         //given
+        // 사용자 B와 C의 카드 수 증가. 이미 교환 신청을 모두 마쳤기 때문에 새롭게 추가해줘야 함
+        accountCardRepository.save(new AccountCard(userB, userBCard, 1));
+        accountCardRepository.save(new AccountCard(userC, userCCard, 2)); // [userCCard +2]
+
         // 사용자 B의 새로운 교환글
         TradePostCreateDto postCreateDto = makeTradePostCreateDto(userBCard.getId());
         tradeService.tradePost(userB.getId(), postCreateDto);
         TradePost postB = tradePostRepository.findAll().getLast();
         log.info("userB's new tradePost: {} {} {}", postB.getId(), postB.getTitle(), postB.getTradeStatus()); // 2 교환글 제목 WAITING
 
-        // 사용자 B의 글에 신청
+        // 사용자 B의 글에 신청 [userCCard -1]
         TradeRequestCreateDto requestDto = makeTradeRequestCreateDto(userCCard.getId());
         tradeService.tradeRequest(postB.getId(), userC.getId(), requestDto);
         Long newRequestId = tradeRequestRepository.findByRequester(userC).getLast().getId();
@@ -241,7 +245,7 @@ public class TradeServiceConcurrencyTest extends TradeConcurrencyBase {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
         CountDownLatch latch = new CountDownLatch(1);
 
-        // 멀티 스레드 1: 사용자 C의 교환글 등록
+        // 멀티 스레드 1: 사용자 C의 교환글 등록 [userCCard -1]
         executorService.submit(() -> {
             try {
                 latch.await();
@@ -255,7 +259,7 @@ public class TradeServiceConcurrencyTest extends TradeConcurrencyBase {
             }
         });
 
-        // 멀티 스레드 2: 교환글 B의 취소 / 비동기 스레드 실행
+        // 멀티 스레드 2: 교환글 B의 취소 / 비동기 스레드 실행 [userCCard +1]
         executorService.submit(() -> {
             try {
                 latch.await();
@@ -267,7 +271,7 @@ public class TradeServiceConcurrencyTest extends TradeConcurrencyBase {
             }
         });
 
-        // 멀티 스레드 3: 교환글 A의 거절
+        // 멀티 스레드 3: 교환글 A의 거절 [userCCard +1]
         executorService.submit(() -> {
             try {
                 latch.await();
@@ -296,6 +300,19 @@ public class TradeServiceConcurrencyTest extends TradeConcurrencyBase {
             );
         });
 
+        // 멀티 스레드 2의 결과 확인
+        assertAll(
+                () -> assertEquals(TradeStatus.CANCEL, tradePostRepository.findById(postB.getId()).get().getTradeStatus()),
+                () -> assertEquals(TradeStatus.CANCEL, tradeRequestRepository.findById(newRequestId).get().getTradeStatus())
+        );
+
+        // 멀티 스레드 3의 결과 확인
+        assertAll(
+                () -> assertEquals(TradeStatus.WAITING, tradePostRepository.findById(tradePost.getId()).get().getTradeStatus()),
+                () -> assertEquals(TradeStatus.REJECTED, tradeRequestRepository.findById(requestC.getId()).get().getTradeStatus())
+        );
+
+        // 최종적으로 userC는 userCCard를 2개 들고 있어야 함.
         assertEquals(2, accountCardRepository.findByAccountAndCard(userC, userCCard).get().getCount());
     }
 }

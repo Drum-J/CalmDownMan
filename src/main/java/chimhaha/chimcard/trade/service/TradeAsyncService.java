@@ -35,6 +35,9 @@ public class TradeAsyncService {
                     } catch (InterruptedException interruptedException) {
                         Thread.currentThread().interrupt();
                     }
+                } catch (Exception e) {
+                    log.error("비동기 스레드에서 예상치 못한 예외가 발생했습니다. (요청 ID: {}, 시도 횟수: {})", request.getId(), retries);
+                    log.error(e.getMessage(), e);
                 }
             }
 
