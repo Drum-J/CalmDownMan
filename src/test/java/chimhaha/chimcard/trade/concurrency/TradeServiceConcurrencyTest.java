@@ -4,6 +4,8 @@ import chimhaha.chimcard.entity.AccountCard;
 import chimhaha.chimcard.entity.TradePost;
 import chimhaha.chimcard.entity.TradeRequest;
 import chimhaha.chimcard.entity.TradeStatus;
+import chimhaha.chimcard.trade.dto.TradePostCreateDto;
+import chimhaha.chimcard.trade.dto.TradeRequestCreateDto;
 import chimhaha.chimcard.trade.dto.TradeStatusRequestDto;
 import lombok.extern.slf4j.Slf4j;
 import org.awaitility.Awaitility;
@@ -182,6 +184,16 @@ public class TradeServiceConcurrencyTest extends TradeConcurrencyBase {
         executorService.shutdown();
         executorService.awaitTermination(10, TimeUnit.SECONDS);
 
+        // 비동기 스레드의 로직(C 거절)이 최종적으로 반영될 때까지 대기
+        // 지금 로직 상 requestCancel() 이 더 빨리 완료되기 때문에 C는 거절 로직에 등록되지 않음. 이미 상태가 WAITING이 아니기 때문
+        Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+            TradeRequest request = tradeRequestRepository.findById(requestC.getId()).get();
+            assertTrue(
+                    request.getTradeStatus().equals(TradeStatus.REJECTED) ||
+                            request.getTradeStatus().equals(TradeStatus.CANCEL)
+            );
+        });
+
         //then
         TradeRequest tradeRequest = tradeRequestRepository.findById(requestC.getId()).get();
         AccountCard accountCard = accountCardRepository.findByAccountAndCard(userC, userCCard).get();
@@ -193,5 +205,97 @@ public class TradeServiceConcurrencyTest extends TradeConcurrencyBase {
                 ),
                 () -> assertEquals(1, accountCard.getCount())
         );
+    }
+
+    /**
+     * 사용자 C가 카드 C를 3장 가지고 신청을 2회 진행 후 (AccountCard count -2)
+     * 교환 등록과 신청의 취소,거절이 동시에 진행될 경우
+     * 경우의 수
+     * 1. 등록이 완료(AccountCard count가 0이 되며 AccountCard 데이터 삭제)
+     * 2. 신청이 취소(교환글 자체가 취소되며 AccountCard count 값 증가)
+     * 3. 신청이 거절(AccountCard count 값 증가)
+     * 1이 먼저 진행될 경우 2 or 3번은 AccountCard를 재성성하거나 count값을 update함.
+     * 2 or 3번이 먼저 진행될 경우 AccountCard의 count 값이 먼저 update 되어 AccountCard 데이터는 삭제되지 않음.
+     * ==========
+     * 테스트 실행 시 1-3-2 순으로 진행됨
+     */
+    @Test
+    @DisplayName("사용자 C의 여러 동시성 문제")
+    void manyConcurrencyUserC() throws Exception {
+        //given
+        // 사용자 B의 새로운 교환글
+        TradePostCreateDto postCreateDto = makeTradePostCreateDto(userBCard.getId());
+        tradeService.tradePost(userB.getId(), postCreateDto);
+        TradePost postB = tradePostRepository.findAll().getLast();
+        log.info("userB's new tradePost: {} {} {}", postB.getId(), postB.getTitle(), postB.getTradeStatus()); // 2 교환글 제목 WAITING
+
+        // 사용자 B의 글에 신청
+        TradeRequestCreateDto requestDto = makeTradeRequestCreateDto(userCCard.getId());
+        tradeService.tradeRequest(postB.getId(), userC.getId(), requestDto);
+        Long newRequestId = tradeRequestRepository.findByRequester(userC).getLast().getId();
+        log.info("newRequestId = {}", newRequestId); // 4
+
+        log.info("==== setUp2 end ====");
+
+        //when
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        // 멀티 스레드 1: 사용자 C의 교환글 등록
+        executorService.submit(() -> {
+            try {
+                latch.await();
+                TradePostCreateDto postDto = makeTradePostCreateDto(userCCard.getId());
+                tradeService.tradePost(userC.getId(), postDto);
+                TradePost postC = tradePostRepository.findAll().getLast();
+                log.info("userC's new tradePost: {} {} {}", postC.getId(), postC.getTitle(), postC.getTradeStatus()); // 3 교환글 제목 WAITING
+
+            } catch (InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
+        });
+
+        // 멀티 스레드 2: 교환글 B의 취소 / 비동기 스레드 실행
+        executorService.submit(() -> {
+            try {
+                latch.await();
+                tradeService.postCancel(postB.getId(), userB.getId());
+                log.info("postB's cancel: {} {} {}", postB.getId(), postB.getTitle(), postB.getTradeStatus());
+                // 2 교환글 제목 WAITING -> postB를 재조회 하지 않았기 때문에 WAITING 출력됨
+            } catch (InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
+        });
+
+        // 멀티 스레드 3: 교환글 A의 거절
+        executorService.submit(() -> {
+            try {
+                latch.await();
+                TradeStatusRequestDto rejectDto = new TradeStatusRequestDto(requestC.getId());
+                tradeService.tradeReject(tradePost.getId(), owner.getId(), rejectDto);
+                log.info("postA's reject: {} {} / {}", tradePost.getId(), tradePost.getTradeStatus(), requestC.getTradeStatus());
+                // 1 WAITING / WAITING -> requestC를 재조회 하지 않았기 때문에 WAITING 출력됨
+            } catch (InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
+        });
+
+        latch.countDown();
+        executorService.shutdown();
+        executorService.awaitTermination(10, TimeUnit.SECONDS);
+
+        //then
+        // 비동기 스레드 완료 대기
+        Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+            // 비동기 스레드에서 데이터를 변경했기 때문에 새롭게 조회
+            TradePost findPostB = tradePostRepository.findById(postB.getId()).get();
+            TradeRequest newRequestC = tradeRequestRepository.findById(newRequestId).get();
+            assertAll(
+                    () -> assertEquals(TradeStatus.CANCEL, findPostB.getTradeStatus()),
+                    () -> assertEquals(TradeStatus.CANCEL, newRequestC.getTradeStatus())
+            );
+        });
+
+        assertEquals(2, accountCardRepository.findByAccountAndCard(userC, userCCard).get().getCount());
     }
 }
