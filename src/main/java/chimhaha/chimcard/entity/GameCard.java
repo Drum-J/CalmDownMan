@@ -32,7 +32,7 @@ public class GameCard extends TimeStamped {
     private CardLocation location = CardLocation.DECK;
 
     @Setter
-    private Integer order; // 덱에서의 순서
+    private Integer cardOrder; // 덱에서의 순서
 
     @Builder
     public GameCard(GameRoom gameRoom, Account player, Card card) {
