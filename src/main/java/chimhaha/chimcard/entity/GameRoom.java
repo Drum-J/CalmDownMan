@@ -35,6 +35,13 @@ public class GameRoom extends TimeStamped {
         this.status = GameStatus.WAITING;
     }
 
+    public GameRoom(Account player1, Account player2) {
+        this.player1 = player1;
+        this.player2 = player2;
+        this.status = GameStatus.PLAYING;
+        this.currentTurnPlayerId = whoIsFirst();
+    }
+
     public void joinPlayer2(Account player2) {
         this.player2 = player2;
         this.status = GameStatus.PLAYING;

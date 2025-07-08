@@ -3,7 +3,7 @@ package chimhaha.chimcard.common;
 public class MessageConstants {
 
     public static final String ACCOUNT_NOT_FOUND = "해당 회원을 찾을 수 없습니다.";
-    public static final String CARD_NOT_FOUND = "해당 카드을 찾을 수 없습니다.";
+    public static final String CARD_NOT_FOUND = "해당 카드를 찾을 수 없습니다.";
     public static final String CARD_SEASON_NOT_FOUND = "해당 카드 시즌을 찾을 수 없습니다.";
     public static final String TRADE_POST_NOT_FOUND = "해당 교환글을 찾을 수 없습니다.";
     public static final String TRADE_REQUEST_NOT_FOUND = "해당 교환 신청을 찾을 수 없습니다.";

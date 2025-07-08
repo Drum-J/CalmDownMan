@@ -4,9 +4,8 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-import static jakarta.persistence.FetchType.*;
+import static jakarta.persistence.FetchType.LAZY;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
@@ -31,14 +30,14 @@ public class GameCard extends TimeStamped {
     @Enumerated(EnumType.STRING)
     private CardLocation location = CardLocation.DECK;
 
-    @Setter
     private Integer cardOrder; // 덱에서의 순서
 
     @Builder
-    public GameCard(GameRoom gameRoom, Account player, Card card) {
+    public GameCard(GameRoom gameRoom, Account player, Card card, Integer cardOrder) {
         this.gameRoom = gameRoom;
         this.player = player;
         this.card = card;
+        this.cardOrder = cardOrder;
     }
 
     public void toHand() {
