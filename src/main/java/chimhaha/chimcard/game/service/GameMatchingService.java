@@ -43,6 +43,7 @@ public class GameMatchingService {
 
     @Async
     public CompletableFuture<GameRoom> joinMatching(MatchingRequestDto dto) {
+        log.info("async joinMatching: [{}]", Thread.currentThread().getName());
         if(matchingMap.containsKey(dto.playerId())) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("이미 매칭 대기열에 등록 되어있습니다."));
         }

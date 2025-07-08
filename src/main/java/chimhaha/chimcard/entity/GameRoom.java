@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static jakarta.persistence.FetchType.*;
@@ -71,5 +72,16 @@ public class GameRoom extends TimeStamped {
 
     public boolean isFinished() {
         return status == GameStatus.FINISHED;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof GameRoom gameRoom)) return false;
+        return Objects.equals(id, gameRoom.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 }

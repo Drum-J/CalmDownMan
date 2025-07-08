@@ -36,7 +36,8 @@ public class Card extends TimeStamped {
     private CardSeason cardSeason;
 
     @Builder
-    public Card(String title, AttackType attackType, Grade grade, int power,String imageUrl, CardSeason cardSeason) {
+    public Card(Long id, String title, AttackType attackType, Grade grade, int power,String imageUrl, CardSeason cardSeason) {
+        this.id = id;
         this.title = title;
         this.attackType = attackType;
         this.grade = grade;
