@@ -6,6 +6,7 @@ import chimhaha.chimcard.game.dto.MatchingRequestDto;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,14 +17,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 class GameMatchingServiceTest {
 
@@ -131,6 +130,66 @@ class GameMatchingServiceTest {
         );
     }
 
+    @Test
+    @DisplayName("동시성 문제 - 매칭 성공과 취소가 동시에 발생할 경우")
+    void matchSuccessAndCancelConcurrency() throws Exception {
+        //given
+        Account player1 = createAccount("user1", "테스트유저1");
+        Account player2 = createAccount("user2", "테스트유저2");
+        MatchingRequestDto dto1 = new MatchingRequestDto(1L, new ArrayList<>(List.of(1L ,2L)));
+        MatchingRequestDto dto2 = new MatchingRequestDto(2L, new ArrayList<>(List.of(3L, 4L)));
+
+        // cancelMatching 이 먼저 실행되면 이게 실행되지 않는다.
+        lenient().when(accountRepository.findById(1L)).thenReturn(Optional.of(player1));
+        lenient().when(accountRepository.findById(2L)).thenReturn(Optional.of(player2));
+        lenient().when(cardRepository.findAllById(dto1.cardIds())).thenReturn(getCardList(1));
+        lenient().when(cardRepository.findAllById(dto2.cardIds())).thenReturn(getCardList(2));
+
+        // 대기열 등록
+        CompletableFuture<GameRoom> future1 = gameMatchingService.joinMatching(dto1);
+        CompletableFuture<GameRoom> future2 = gameMatchingService.joinMatching(dto2);
+
+        //when
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        // 매칭 성공
+        executorService.submit(() -> {
+            try {
+                latch.await();
+                gameMatchingService.successMatching();
+            } catch (InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
+        });
+        
+        // 1번 유저 매칭 취소
+        executorService.submit(() -> {
+            try {
+                latch.await();
+                gameMatchingService.cancelMatching(1L);
+            } catch (InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
+        });
+
+        latch.countDown();
+        executorService.shutdown();
+        executorService.awaitTermination(5, TimeUnit.SECONDS);
+
+        //then
+        if (future1.isCompletedExceptionally()) { // 매칭 취소가 먼저 된 경우
+            assertAll(
+                    () -> {
+                        verify(gameRoomRepository, never()).save(any(GameRoom.class));
+                        verify(accountRepository, never()).findById(anyLong());
+                        verify(cardRepository, never()).findAllById(anyList());
+                    }
+            );
+        } else { // 매칭 성사가 먼저 된 경우
+            assertTrue(future2.isDone() && !future2.isCompletedExceptionally());
+        }
+    }
     private Account createAccount(String username, String nickname) {
         return Account.builder()
                 .username(username)
