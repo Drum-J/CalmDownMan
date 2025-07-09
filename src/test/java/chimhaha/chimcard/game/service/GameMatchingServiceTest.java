@@ -16,7 +16,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -76,7 +78,59 @@ class GameMatchingServiceTest {
         verify(cardRepository, times(2)).findAllById(anyList());
         verify(gameCardRepository, times(2)).saveAll(anyList());
     }
-    
+
+    @Test
+    @DisplayName("실패 - 대기열에 대기 중인 플레이어의 매칭 요청")
+    void joinDuplicate() throws Exception {
+        //given
+        MatchingRequestDto firstRequest = new MatchingRequestDto(1L, List.of(1L, 2L));
+        gameMatchingService.joinMatching(firstRequest); // 최초 대기열 진입 - 정상 처리
+
+        //when
+        MatchingRequestDto secondRequest = new MatchingRequestDto(1L, List.of(1L, 2L));
+        CompletableFuture<GameRoom> failedFuture = gameMatchingService.joinMatching(secondRequest); // 대기열 재진입 - 예외 발생
+
+        //then
+        assertAll(
+                () -> assertTrue(failedFuture.isCompletedExceptionally()),
+                () -> {
+                    ExecutionException exception = assertThrows(ExecutionException.class, () -> failedFuture.get(2, TimeUnit.SECONDS));
+                    IllegalArgumentException illegalArgumentException = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+                    assertEquals("이미 매칭 대기열에 등록 되어있습니다.",illegalArgumentException.getMessage());
+                }
+        );
+    }
+
+    @Test
+    @DisplayName("매칭 취소")
+    void matchCancel() throws Exception {
+        //given
+        MatchingRequestDto firstRequest = new MatchingRequestDto(1L, List.of(1L, 2L));
+        CompletableFuture<GameRoom> future = gameMatchingService.joinMatching(firstRequest);
+
+        //when
+        gameMatchingService.cancelMatching(1L);
+
+        //then
+        assertAll(
+                () -> {
+                    CancellationException cancel = assertThrows(CancellationException.class, () -> future.get(2, TimeUnit.SECONDS));
+                    assertEquals("매칭 취소가 완료되었습니다.", cancel.getMessage());
+                }
+        );
+
+        // 매칭 취소 후 successMatching 호출
+        gameMatchingService.successMatching(); // 대기열 부족으로 아무일도 일어나지 않음.
+        assertAll(
+                () -> {
+                    verify(accountRepository, never()).findById(anyLong());
+                    verify(gameRoomRepository, never()).save(any(GameRoom.class));
+                    verify(cardRepository, never()).findAllById(anyList());
+                    verify(gameCardRepository, never()).saveAll(anyList());
+                }
+        );
+    }
+
     private Account createAccount(String username, String nickname) {
         return Account.builder()
                 .username(username)

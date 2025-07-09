@@ -54,7 +54,7 @@ public class GameMatchingService {
         return dto.future();
     }
 
-    public void cancel(Long playerId) {
+    public void cancelMatching(Long playerId) {
         MatchingRequestDto cancelRequest = matchingMap.remove(playerId);
 
         if(cancelRequest != null) {
