@@ -147,30 +147,17 @@ public class GameMatchingService {
         Map<Long, Card> cardMap = cardRepository.findAllById(cardIds)
                 .stream().collect(Collectors.toMap(Card::getId, Function.identity()));
 
-        List<Integer> orders = makeCardOrder(cardIds.size());
-
         List<GameCard> gameCards = new ArrayList<>();
-        for (int i = 0; i < cardIds.size(); i++) {
-            Long cardId = cardIds.get(i);
+        for (Long cardId : cardIds) {
             Card card = cardMap.get(cardId);
 
             if (card == null) {
                 throw new ResourceNotFoundException(CARD_NOT_FOUND);
             }
 
-            gameCards.add(new GameCard(gameRoom, player, card, orders.get(i)));
+            gameCards.add(new GameCard(gameRoom, player, card));
         }
 
         gameCardRepository.saveAll(gameCards);
-    }
-
-    private List<Integer> makeCardOrder(int size) {
-        List<Integer> orders = new ArrayList<>();
-        for (int i = 0; i < size; i++) {
-            orders.add(i);
-        }
-
-        Collections.shuffle(orders);
-        return orders;
     }
 }

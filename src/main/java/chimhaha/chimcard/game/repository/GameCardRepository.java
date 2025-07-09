@@ -1,7 +1,15 @@
 package chimhaha.chimcard.game.repository;
 
 import chimhaha.chimcard.entity.GameCard;
+import chimhaha.chimcard.entity.GameRoom;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 public interface GameCardRepository extends JpaRepository<GameCard, Long> {
+
+    @Query("SELECT gc FROM GameCard gc JOIN FETCH gc.card WHERE gc.gameRoom.id = :gameRoomId AND gc.player.id =:playerId")
+    List<GameCard> findWithCardByGameRoomAndPlayerId(@Param("gameRoomId") Long gameRoomId, @Param("playerId") Long playerId);
 }

@@ -28,20 +28,13 @@ public class GameCard extends TimeStamped {
     private Card card;
 
     @Enumerated(EnumType.STRING)
-    private CardLocation location = CardLocation.DECK;
-
-    private Integer cardOrder; // 덱에서의 순서
+    private CardLocation location = CardLocation.HAND;
 
     @Builder
-    public GameCard(GameRoom gameRoom, Account player, Card card, Integer cardOrder) {
+    public GameCard(GameRoom gameRoom, Account player, Card card) {
         this.gameRoom = gameRoom;
         this.player = player;
         this.card = card;
-        this.cardOrder = cardOrder;
-    }
-
-    public void toHand() {
-        location = CardLocation.HAND;
     }
 
     public void toField() {
