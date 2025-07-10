@@ -7,19 +7,16 @@ import chimhaha.chimcard.entity.GameCard;
 import chimhaha.chimcard.entity.GameRoom;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.MatchingRequestDto;
+import chimhaha.chimcard.game.dto.MatchingSuccessResult;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
@@ -44,74 +41,52 @@ public class GameMatchingService {
     private final Queue<MatchingRequestDto> matchingQueue = new LinkedBlockingQueue<>();
     private final Lock lock = new ReentrantLock();
 
-    @Async
-    public CompletableFuture<GameRoom> joinMatching(MatchingRequestDto dto) {
+    public void joinMatching(MatchingRequestDto dto) {
         lock.lock();
-        log.info("lock joinMatching: [{}]", Thread.currentThread().getName());
         try {
             log.info("async joinMatching: [{}]", Thread.currentThread().getName());
             if(matchingMap.containsKey(dto.playerId())) {
-                return CompletableFuture.failedFuture(new IllegalArgumentException("이미 매칭 대기열에 등록 되어있습니다."));
+                throw new IllegalArgumentException("이미 매칭 대기열에 등록 되어있습니다.");
             }
 
             matchingMap.put(dto.playerId(), dto);
             matchingQueue.add(dto);
-
-            return dto.future();
         } finally {
             lock.unlock();
-            log.info("unlock joinMatching: [{}]", Thread.currentThread().getName());
         }
     }
 
     public void cancelMatching(Long playerId) {
         lock.lock();
-        log.info("lock cancelMatching: [{}]", Thread.currentThread().getName());
         try {
             MatchingRequestDto cancelRequest = matchingMap.remove(playerId);
             log.info("cancelRequest: {}", cancelRequest);
-            if(cancelRequest != null) {
+            if (cancelRequest != null) {
                 matchingQueue.remove(cancelRequest);
-                cancelRequest.future().completeExceptionally(
-                        new CancellationException("매칭 취소가 완료되었습니다.")
-                );
-
-                log.info("플레이어: {} 매칭 취소 완료", cancelRequest.playerId());
             }
         } finally {
             lock.unlock();
-            log.info("unlock cancelMatching: [{}]", Thread.currentThread().getName());
         }
     }
 
-    @Scheduled(fixedRate = 1000)
     @Transactional
-    public void successMatching() {
+    public Optional<MatchingSuccessResult> successMatching() {
         MatchingRequestDto request1 = null;
         MatchingRequestDto request2 = null;
 
         lock.lock();
-        log.info("lock successMatching: [{}]", Thread.currentThread().getName());
         try {
             if (matchingQueue.size() >= 2) {
                 log.info("대기열: {}", matchingQueue.size());
                 request1 = matchingQueue.poll();
                 request2 = matchingQueue.poll();
 
-                log.info("request1: {}", request1);
-                log.info("request2: {}", request2);
-
                 // map에서도 제거
-                if (request1 != null) {
-                    matchingMap.remove(request1.playerId());
-                }
-                if (request2 != null) {
-                    matchingMap.remove(request2.playerId());
-                }
+                if (request1 != null) matchingMap.remove(request1.playerId());
+                if (request2 != null) matchingMap.remove(request2.playerId());
             }
         } finally {
             lock.unlock();
-            log.info("unlock successMatching: [{}]", Thread.currentThread().getName());
         }
 
         if (request1 != null && request2 != null) {
@@ -126,16 +101,14 @@ public class GameMatchingService {
                 makeGameCard(gameRoom, player1, request1.cardIds());
                 makeGameCard(gameRoom, player2, request2.cardIds());
 
-                request1.future().complete(gameRoom);
-                request2.future().complete(gameRoom);
                 log.info("매칭 성공. gameId: {}, player1: {}, player2: {}", gameRoom.getId(), player1.getNickname(), player2.getNickname());
+                return Optional.of(new MatchingSuccessResult(gameRoom.getId(), player1.getId(), player2.getId()));
             } catch (Exception e) {
                 log.error("매칭 성공 후 게임 생성 실패: {}", e.getMessage() , e);
-                RuntimeException matchException = new RuntimeException("매칭 처리 중 서버 오류가 발생했습니다.", e);
-                request1.future().completeExceptionally(matchException);
-                request2.future().completeExceptionally(matchException);
+                // (선택) 실패한 경우 대기열 재진입 로직 추가
             }
         }
+        return Optional.empty();
     }
 
     private Account getAccount(Long accountId) {
