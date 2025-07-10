@@ -90,7 +90,7 @@ public class GameMatchingService {
         }
 
         if (request1 != null && request2 != null) {
-            log.info("lock 반환 후 DB 작업 및 future.complete()");
+            log.info("lock 반환 후 DB 작업");
             try {
                 Account player1 = getAccount(request1.playerId());
                 Account player2 = getAccount(request2.playerId());

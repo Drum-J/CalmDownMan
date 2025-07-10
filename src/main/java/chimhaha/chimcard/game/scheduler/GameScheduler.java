@@ -1,6 +1,5 @@
 package chimhaha.chimcard.game.scheduler;
 
-import chimhaha.chimcard.game.dto.MatchingSuccessResult;
 import chimhaha.chimcard.game.service.GameMatchingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

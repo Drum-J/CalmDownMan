@@ -1,9 +1,9 @@
-/*
 package chimhaha.chimcard.game.service;
 
 import chimhaha.chimcard.card.repository.CardRepository;
 import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.game.dto.MatchingRequestDto;
+import chimhaha.chimcard.game.dto.MatchingSuccessResult;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
@@ -25,7 +25,7 @@ import static org.mockito.BDDMockito.*;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
-class GameMatchingServiceTest {
+public class GameMatchingServiceTest {
 
     @InjectMocks GameMatchingService gameMatchingService; // 테스트 대상
 
@@ -54,25 +54,17 @@ class GameMatchingServiceTest {
         given(cardRepository.findAllById(dto2.cardIds())).willReturn(getCardList(2));
 
         //when
-        // 1. 플레이어의 매칭 요청
-        CompletableFuture<GameRoom> future1 = gameMatchingService.joinMatching(dto1);
-        CompletableFuture<GameRoom> future2 = gameMatchingService.joinMatching(dto2);
-
-        // 2. 스케쥴러 직접 호출
-        gameMatchingService.successMatching();
+        // 플레이어의 매칭 요청
+        gameMatchingService.joinMatching(dto1);
+        gameMatchingService.joinMatching(dto2);
 
         //then
-        // 1-1. 매칭 요청의 결과 확인, 스케줄에 맞게 돌진 않지만 스케쥴이 1초마다 돌기 때문에 2초로 지정
-        GameRoom gameRoom1 = future1.get(2, TimeUnit.SECONDS);
-        GameRoom gameRoom2 = future2.get(2, TimeUnit.SECONDS);
+        // 스케쥴러 직접 호출
+        gameMatchingService.successMatching().ifPresent(result -> {
+            log.info("Match Success! sendMatchSuccessMessage() 호출!");
+        });
 
-        // 1-2. 같은 GameRoom 인지 확인
-        assertAll(
-                () -> assertNotNull(gameRoom1),
-                () -> assertEquals(gameRoom1, gameRoom2)
-        );
-
-        // 2. successMatching 에서 해당 메서드가 얼마나 호출 되었는지 확인
+        // successMatching 에서 해당 메서드가 얼마나 호출 되었는지 확인
         verify(accountRepository, times(2)).findById(anyLong());
         verify(gameRoomRepository, times(1)).save(any(GameRoom.class));
         verify(cardRepository, times(2)).findAllById(anyList());
@@ -88,15 +80,14 @@ class GameMatchingServiceTest {
 
         //when
         MatchingRequestDto secondRequest = new MatchingRequestDto(1L, List.of(1L, 2L));
-        CompletableFuture<GameRoom> failedFuture = gameMatchingService.joinMatching(secondRequest); // 대기열 재진입 - 예외 발생
 
         //then
+        // 대기열 재진입 - 예외 발생
         assertAll(
-                () -> assertTrue(failedFuture.isCompletedExceptionally()),
                 () -> {
-                    ExecutionException exception = assertThrows(ExecutionException.class, () -> failedFuture.get(2, TimeUnit.SECONDS));
-                    IllegalArgumentException illegalArgumentException = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-                    assertEquals("이미 매칭 대기열에 등록 되어있습니다.",illegalArgumentException.getMessage());
+                    IllegalArgumentException exception
+                            = assertThrows(IllegalArgumentException.class, () -> gameMatchingService.joinMatching(secondRequest));
+                    assertEquals("이미 매칭 대기열에 등록 되어있습니다.", exception.getMessage());
                 }
         );
     }
@@ -106,22 +97,17 @@ class GameMatchingServiceTest {
     void matchCancel() throws Exception {
         //given
         MatchingRequestDto firstRequest = new MatchingRequestDto(1L, List.of(1L, 2L));
-        CompletableFuture<GameRoom> future = gameMatchingService.joinMatching(firstRequest);
+        gameMatchingService.joinMatching(firstRequest);
 
         //when
         gameMatchingService.cancelMatching(1L);
 
         //then
-        assertAll(
-                () -> {
-                    CancellationException cancel = assertThrows(CancellationException.class, () -> future.get(2, TimeUnit.SECONDS));
-                    assertEquals("매칭 취소가 완료되었습니다.", cancel.getMessage());
-                }
-        );
-
         // 매칭 취소 후 successMatching 호출
-        gameMatchingService.successMatching(); // 대기열 부족으로 아무일도 일어나지 않음.
+        Optional<MatchingSuccessResult> result = gameMatchingService.successMatching();// 대기열 부족으로 아무일도 일어나지 않음.
+
         assertAll(
+                () -> assertTrue(result.isEmpty()),
                 () -> {
                     verify(accountRepository, never()).findById(anyLong());
                     verify(gameRoomRepository, never()).save(any(GameRoom.class));
@@ -147,21 +133,17 @@ class GameMatchingServiceTest {
         lenient().when(cardRepository.findAllById(dto2.cardIds())).thenReturn(getCardList(2));
 
         // 대기열 등록
-        CompletableFuture<GameRoom> future1 = gameMatchingService.joinMatching(dto1);
-        CompletableFuture<GameRoom> future2 = gameMatchingService.joinMatching(dto2);
+        gameMatchingService.joinMatching(dto1);
+        gameMatchingService.joinMatching(dto2);
 
         //when
         ExecutorService executorService = Executors.newFixedThreadPool(2);
         CountDownLatch latch = new CountDownLatch(1);
 
         // 매칭 성공
-        executorService.submit(() -> {
-            try {
-                latch.await();
-                gameMatchingService.successMatching();
-            } catch (InterruptedException e) {
-                log.error(e.getMessage(), e);
-            }
+        Future<Optional<MatchingSuccessResult>> matchSuccessResult = executorService.submit(() -> {
+            latch.await();
+            return gameMatchingService.successMatching();
         });
 
         // 1번 유저 매칭 취소
@@ -179,7 +161,10 @@ class GameMatchingServiceTest {
         executorService.awaitTermination(5, TimeUnit.SECONDS);
 
         //then
-        if (future1.isCompletedExceptionally()) { // 매칭 취소가 먼저 된 경우
+        Optional<MatchingSuccessResult> result = matchSuccessResult.get();
+
+        if (result.isEmpty()) { // 매칭 취소가 먼저 된 경우
+            log.info("매칭 취소가 먼저 진행됨.");
             assertAll(
                     () -> {
                         verify(gameRoomRepository, never()).save(any(GameRoom.class));
@@ -188,9 +173,18 @@ class GameMatchingServiceTest {
                     }
             );
         } else { // 매칭 성사가 먼저 된 경우
-            assertTrue(future2.isDone() && !future2.isCompletedExceptionally());
+            log.info("매칭 성사가 먼저 진행됨.");
+            assertAll(
+                    () -> {
+                        verify(accountRepository, times(2)).findById(anyLong());
+                        verify(gameRoomRepository, times(1)).save(any(GameRoom.class));
+                        verify(cardRepository, times(2)).findAllById(anyList());
+                        verify(gameCardRepository, times(2)).saveAll(anyList());
+                    }
+            );
         }
     }
+
     private Account createAccount(String username, String nickname) {
         return Account.builder()
                 .username(username)
@@ -226,4 +220,4 @@ class GameMatchingServiceTest {
                 .power(10)
                 .build();
     }
-}*/
+}
