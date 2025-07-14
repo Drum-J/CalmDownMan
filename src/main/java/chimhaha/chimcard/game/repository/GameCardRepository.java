@@ -10,6 +10,6 @@ import java.util.List;
 
 public interface GameCardRepository extends JpaRepository<GameCard, Long> {
 
-    @Query("SELECT gc FROM GameCard gc JOIN FETCH gc.card WHERE gc.gameRoom.id = :gameRoomId AND gc.player.id =:playerId")
+    @Query("SELECT gc FROM GameCard gc JOIN FETCH gc.card WHERE gc.gameRoom.id = :gameRoomId AND gc.playerId =:playerId")
     List<GameCard> findWithCardByGameRoomAndPlayerId(@Param("gameRoomId") Long gameRoomId, @Param("playerId") Long playerId);
 }

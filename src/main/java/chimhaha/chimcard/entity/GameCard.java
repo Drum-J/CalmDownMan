@@ -21,8 +21,7 @@ public class GameCard extends TimeStamped {
     @ManyToOne(fetch = LAZY)
     private GameRoom gameRoom;
 
-    @ManyToOne(fetch = LAZY)
-    private Account player;
+    private Long playerId;
 
     @ManyToOne(fetch = LAZY)
     private Card card;
@@ -31,9 +30,9 @@ public class GameCard extends TimeStamped {
     private CardLocation location = CardLocation.HAND;
 
     @Builder
-    public GameCard(GameRoom gameRoom, Account player, Card card) {
+    public GameCard(GameRoom gameRoom, Long playerId, Card card) {
         this.gameRoom = gameRoom;
-        this.player = player;
+        this.playerId = playerId;
         this.card = card;
     }
 

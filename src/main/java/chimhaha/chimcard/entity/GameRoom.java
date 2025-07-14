@@ -31,11 +31,6 @@ public class GameRoom extends TimeStamped {
     @Enumerated(EnumType.STRING)
     private GameStatus status; // 게임 상태
 
-    public GameRoom(Account player1) {
-        this.player1 = player1;
-        this.status = GameStatus.WAITING;
-    }
-
     public GameRoom(Account player1, Account player2) {
         this.player1 = player1;
         this.player2 = player2;
@@ -43,23 +38,8 @@ public class GameRoom extends TimeStamped {
         this.currentTurnPlayerId = whoIsFirst();
     }
 
-    public void joinPlayer2(Account player2) {
-        this.player2 = player2;
-        this.status = GameStatus.PLAYING;
-        this.currentTurnPlayerId = whoIsFirst();
-    }
-
     private Long whoIsFirst() {
         return ThreadLocalRandom.current().nextBoolean() ? player1.getId() : player2.getId();
-    }
-
-    public boolean isMyTurn(Long playerId) {
-        return currentTurnPlayerId.equals(playerId);
-    }
-
-    public void changeTurn() {
-        currentTurnPlayerId = currentTurnPlayerId.equals(player1.getId()) ?
-                player2.getId() : player1.getId();
     }
 
     public boolean canJoin() {

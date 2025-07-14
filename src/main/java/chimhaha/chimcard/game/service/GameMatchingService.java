@@ -98,8 +98,8 @@ public class GameMatchingService {
                 GameRoom gameRoom = new GameRoom(player1, player2);
                 gameRoomRepository.save(gameRoom);
 
-                makeGameCard(gameRoom, player1, request1.cardIds());
-                makeGameCard(gameRoom, player2, request2.cardIds());
+                makeGameCard(gameRoom, player1.getId(), request1.cardIds());
+                makeGameCard(gameRoom, player2.getId(), request2.cardIds());
 
                 log.info("매칭 성공. gameId: {}, player1: {}, player2: {}", gameRoom.getId(), player1.getNickname(), player2.getNickname());
                 return Optional.of(new MatchingSuccessResult(gameRoom.getId(), player1.getId(), player2.getId()));
@@ -116,7 +116,7 @@ public class GameMatchingService {
                 .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
     }
 
-    private void makeGameCard(GameRoom gameRoom, Account player, List<Long> cardIds) {
+    private void makeGameCard(GameRoom gameRoom, Long player, List<Long> cardIds) {
         Map<Long, Card> cardMap = cardRepository.findAllById(cardIds)
                 .stream().collect(Collectors.toMap(Card::getId, Function.identity()));
 
