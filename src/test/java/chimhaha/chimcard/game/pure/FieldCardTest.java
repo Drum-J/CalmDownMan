@@ -4,7 +4,6 @@ import chimhaha.chimcard.entity.AttackType;
 import chimhaha.chimcard.entity.Grade;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
-import org.mockito.internal.matchers.CompareTo;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,22 +26,22 @@ public class FieldCardTest {
     private final PureAccount player2 = new PureAccount(2L);
 
     private final List<PureGameCard> cards1 = new ArrayList<>(List.of(
-            new PureGameCard(player1, new PureCard(1L, SCISSORS, SR, 13)), // 패
-            new PureGameCard(player1, new PureCard(2L, ROCK, SR, 10)), // 승
-            new PureGameCard(player1, new PureCard(3L, SCISSORS, R, 7)), // power 패
-            new PureGameCard(player1, new PureCard(4L, PAPER, R, 9)), // 패
-            new PureGameCard(player1, new PureCard(5L, SCISSORS, N, 6)), // 승
-            new PureGameCard(player1, new PureCard(6L, ROCK, R, 7)), // Grade 승
-            new PureGameCard(player1, new PureCard(7L, PAPER, C, 2)) // 패
+            new PureGameCard(player1.id(), new PureCard(1L, SCISSORS, SR, 13)), // 패
+            new PureGameCard(player1.id(), new PureCard(2L, ROCK, SR, 10)), // 승
+            new PureGameCard(player1.id(), new PureCard(3L, SCISSORS, R, 7)), // power 패
+            new PureGameCard(player1.id(), new PureCard(4L, PAPER, R, 9)), // 패
+            new PureGameCard(player1.id(), new PureCard(5L, SCISSORS, N, 6)), // 승
+            new PureGameCard(player1.id(), new PureCard(6L, ROCK, R, 7)), // Grade 승
+            new PureGameCard(player1.id(), new PureCard(7L, PAPER, C, 2)) // 패
     ));
     private final List<PureGameCard> cards2 = new ArrayList<>(List.of(
-            new PureGameCard(player2, new PureCard(8L, ROCK, SR, 11)), // 승
-            new PureGameCard(player2, new PureCard(9L, SCISSORS, R, 9)), // 패
-            new PureGameCard(player2, new PureCard(10L, SCISSORS, C, 8)), // power 승
-            new PureGameCard(player2, new PureCard(11L, ROCK, R, 11)), // 승
-            new PureGameCard(player2, new PureCard(12L, PAPER, C, 1)), // 패
-            new PureGameCard(player2, new PureCard(13L, ROCK, N, 7)), // Grade 패
-            new PureGameCard(player2, new PureCard(14L, SCISSORS, N, 6)) // 승
+            new PureGameCard(player2.id(), new PureCard(8L, ROCK, SR, 11)), // 승
+            new PureGameCard(player2.id(), new PureCard(9L, SCISSORS, R, 9)), // 패
+            new PureGameCard(player2.id(), new PureCard(10L, SCISSORS, C, 8)), // power 승
+            new PureGameCard(player2.id(), new PureCard(11L, ROCK, R, 11)), // 승
+            new PureGameCard(player2.id(), new PureCard(12L, PAPER, C, 1)), // 패
+            new PureGameCard(player2.id(), new PureCard(13L, ROCK, N, 7)), // Grade 패
+            new PureGameCard(player2.id(), new PureCard(14L, SCISSORS, N, 6)) // 승
     ));
 
     private Long currentTurnPlayerId; // 어떤 플레이어의 턴인가
@@ -102,6 +101,35 @@ public class FieldCardTest {
         );
     }
 
+    @Test
+    @DisplayName("카드 순서대로 게임 진행")
+    void game() throws Exception {
+        // 각 플레이어들이 제출할 카드의 순서
+        int firstIndex = 0;
+        int secondIndex = 0;
+
+        // 한 플레이어가 모든 필드를 차지하거나 손에 든 카드를 모두 제출할 때까지
+        while ((currentPlayer1FieldIndex != 5 && currentPlayer2FieldIndex != 0) && (firstIndex < 7 || secondIndex < 7)) {
+            log.info("현재 턴: {}", currentTurnPlayerId);
+            if (currentTurnPlayerId.equals(player1.id())) {
+                addCardToField(cards1.get(firstIndex++), player1.id());
+            } else {
+                addCardToField(cards2.get(secondIndex++), player2.id());
+            }
+        }
+
+        // while 문 이후에 한 플레이어가 모든 필드를 차지 했다면
+        if (currentPlayer1FieldIndex == 5) {
+            log.info("player1 우승!");
+        } else if (currentPlayer2FieldIndex == 0) {
+            log.info("player2 우승!");
+        } else { // 모든 필드를 차지하지 못했다면 필드의 카드는 승부를 진행
+            while (currentPlayer1FieldIndex >= 0 && currentPlayer2FieldIndex <= 5) {
+                cardBattle();
+            }
+        }
+    }
+
     /**
      * 카드 제출 메서드
      * 각 플레이어의 fieldIndex와 현재 filedCards의 위치에 null 값을 판단해서 필드를 차지 할 수 있게 한다.
@@ -113,7 +141,7 @@ public class FieldCardTest {
                 throw new IllegalArgumentException("더 이상 카드를 제출할 수 없습니다. playerId: " + player);
             }
             for (int i = currentPlayer1FieldIndex; i >= 0; i--) {
-                if (fieldCards.get(i) != null && fieldCards.get(i).account.id().equals(player)) {
+                if (fieldCards.get(i) != null && fieldCards.get(i).player().equals(player)) {
                     fieldCards.set(i + 1, fieldCards.get(i)); // 기존 카드를 오른쪽으로 이동 시키고
                     fieldCards.set(i, null); // 기존 카드가 있던 곳은 비워둠
                 }
@@ -126,7 +154,7 @@ public class FieldCardTest {
                 throw new IllegalArgumentException("더 이상 카드를 제출할 수 없습니다. playerId: " + player);
             }
             for (int i = currentPlayer2FieldIndex; i < 6; i++) {
-                if (fieldCards.get(i) != null && fieldCards.get(i).account().id().equals(player)) {
+                if (fieldCards.get(i) != null && fieldCards.get(i).player().equals(player)) {
                     fieldCards.set(i - 1, fieldCards.get(i)); // 기존 카드를 왼쪽으로 이동 시키고
                     fieldCards.set(i, null); // 기존 카드가 있던 곳은 비워둠
                 }
@@ -136,7 +164,6 @@ public class FieldCardTest {
         }
 
         currentTurnPlayerId = currentTurnPlayerId.equals(player1.id()) ? player2.id() : player1.id();
-        log.info("턴 변경: {}", currentTurnPlayerId);
 
         if (fieldCards.get(currentPlayer1FieldIndex + 1) != null) {
             cardBattle();
@@ -150,6 +177,10 @@ public class FieldCardTest {
 
     // 카드 승부
     private void cardBattle() {
+        if (currentPlayer1FieldIndex == -1 || currentPlayer2FieldIndex == 6) {
+            throw new IllegalArgumentException("더 이상 승부할 수 있는 카드가 존재하지 않습니다.");
+        }
+
         PureGameCard card1 = fieldCards.get(currentPlayer1FieldIndex);
         PureGameCard card2 = fieldCards.get(currentPlayer2FieldIndex);
         log.info("카드 승부 호출!!! player1's Card: {}, player2's Card: {}", card1, card2);
@@ -159,15 +190,34 @@ public class FieldCardTest {
 
         int result = player1.match(player2);
         switch (result) {
-            case 1 -> log.info("승리!");
-            case 0 -> log.info("무승부");
-            case -1 -> log.info("패배...");
+            case 1 -> {
+                // player1 의 카드는 필드에 남고 player2의 카드만 무덤으로 이동, player2 필드 수 변경
+                log.info("player1 승리!");
+                fieldCards.set(currentPlayer2FieldIndex++, null);
+            }
+            case 0 -> {
+                // 양 플레이어의 카드 모두 무덤으로 이동, 양측 필드 수 변경
+                log.info("무승부");
+                fieldCards.set(currentPlayer1FieldIndex--, null);
+                fieldCards.set(currentPlayer2FieldIndex++, null);
+            }
+            case -1 -> {
+                // player1: 무덤, player2: 필드 , player1 필드 수 변경
+                log.info("player1 패배...");
+                fieldCards.set(currentPlayer1FieldIndex--, null);
+            }
+            default -> {
+                throw new IllegalArgumentException("승부 결과를 표시할 수 없습니다.");
+            }
         }
+
+        log.info("승부 결과: {}", fieldCards);
     }
 
     /**
      * 내부 클래스
      */
+    // Account
     record PureAccount(Long id) {
         @Override
         public String toString() {
@@ -175,6 +225,7 @@ public class FieldCardTest {
         }
     }
 
+    // Card
     record PureCard(Long id, AttackType attackType, Grade grade, int power) {
 
         public int match(PureCard other) {
@@ -182,15 +233,15 @@ public class FieldCardTest {
             int result = 0;
 
             int matchType = matchType(this, other);
-            log.info("matchType: {}", matchType);
+            log.info("가위바위보 결과!: {}", matchType);
 
             if (matchType == 0) { // type 무승부일 경우 power 확인
                 int matchPower = matchPower(this, other);
-                log.info("matchPower: {}", matchPower);
+                log.info("침투력 결과!: {}", matchPower);
 
                 if (matchPower == 0) { //power 무승부일 경우 grade 확인
                     int matchGrade = matchGrade(this, other);
-                    log.info("matchGrade: {}", matchGrade);
+                    log.info("등급 결과!: {}", matchGrade);
 
                     if (matchGrade == 0) { // 최종적으로 무승부일 경우
                         return result;
@@ -249,11 +300,12 @@ public class FieldCardTest {
         }
     }
 
-    record PureGameCard(PureAccount account, PureCard card) {
+    // GameCard
+    record PureGameCard(Long player, PureCard card) {
         @Override
         public String toString() {
             return "{" +
-                    "account=" + account +
+                    "player=" + player +
                     ", card=" + card +
                     '}';
         }
