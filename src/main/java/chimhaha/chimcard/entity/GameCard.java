@@ -29,6 +29,8 @@ public class GameCard extends TimeStamped {
     @Enumerated(EnumType.STRING)
     private CardLocation location = CardLocation.HAND;
 
+    private Integer fieldPosition;
+
     @Builder
     public GameCard(GameRoom gameRoom, Long playerId, Card card) {
         this.gameRoom = gameRoom;
@@ -36,11 +38,23 @@ public class GameCard extends TimeStamped {
         this.card = card;
     }
 
-    public void toField() {
-        location = CardLocation.FIELD;
+    // 카드 제출
+    public void handToField(int position) {
+        this.location = CardLocation.FIELD;
+        this.fieldPosition = position;
+    }
+
+    // 필드에서 이동 [1] -> [2] / [5] <- [6]
+    public void moveRight() {
+        fieldPosition++;
+    }
+
+    public void moveLeft() {
+        fieldPosition--;
     }
 
     public void toGrave() {
-        location = CardLocation.GRAVE;
+        this.location = CardLocation.GRAVE;
+        this.fieldPosition = null;
     }
 }

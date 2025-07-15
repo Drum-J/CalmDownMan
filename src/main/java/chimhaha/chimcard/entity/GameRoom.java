@@ -31,6 +31,8 @@ public class GameRoom extends TimeStamped {
     @Enumerated(EnumType.STRING)
     private GameStatus status; // 게임 상태
 
+    private Long winnerId; // 게임 승자
+
     public GameRoom(Account player1, Account player2) {
         this.player1 = player1;
         this.player2 = player2;
@@ -52,6 +54,16 @@ public class GameRoom extends TimeStamped {
 
     public boolean isFinished() {
         return status == GameStatus.FINISHED;
+    }
+
+    public void gameWinner(Long winnerId) {
+        this.winnerId = winnerId;
+        finishGame();
+    }
+
+    public void changeTurn() {
+        currentTurnPlayerId = currentTurnPlayerId.equals(player1.getId()) ?
+                player2.getId() : player1.getId();
     }
 
     @Override
