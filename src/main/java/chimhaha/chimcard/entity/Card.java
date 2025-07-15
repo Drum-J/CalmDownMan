@@ -53,6 +53,34 @@ public class Card extends TimeStamped {
         this.power = power;
     }
 
+    // 승: 1 무승부: 0 패: -1
+    public int match(Card other) {
+        int typeResult = matchType(this, other);
+        if (typeResult != 0) { // type에서 승패 결정 시 즉시 반환
+            return typeResult;
+        }
+
+        int powerResult = matchPower(this, other);
+        if (powerResult != 0) { // power에서 승패 결정 시 즉시 반환
+            return powerResult;
+        }
+
+        return matchGrade(this, other); // type,power 모두 무승부일 시 grade 결과 반환
+    }
+
+    // 승: 1 무승부: 0 패: -1
+    private int matchType(Card card, Card other) {
+        return card.getAttackType().compare(other.getAttackType());
+    }
+
+    private int matchPower(Card card, Card other) {
+        return Integer.compare(card.power, other.power);
+    }
+
+    private int matchGrade(Card card, Card other) {
+        return Integer.compare(card.grade.getValue(), other.grade.getValue()) * -1; // Grade.value 는 등급이 높을수록 숫자가 낮기 때문에 -1 곱해줌
+    }
+
     @Override
     public boolean equals(Object object) {
         if (!(object instanceof Card card)) return false;
