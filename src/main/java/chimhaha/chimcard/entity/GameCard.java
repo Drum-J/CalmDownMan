@@ -31,11 +31,20 @@ public class GameCard extends TimeStamped {
 
     private Integer fieldPosition;
 
-    @Builder
     public GameCard(GameRoom gameRoom, Long playerId, Card card) {
         this.gameRoom = gameRoom;
         this.playerId = playerId;
         this.card = card;
+    }
+
+    @Builder
+    public GameCard(Long id, GameRoom gameRoom, Long playerId, Card card, CardLocation location, Integer fieldPosition) {
+        this.id = id;
+        this.gameRoom = gameRoom;
+        this.playerId = playerId;
+        this.card = card;
+        this.location = location;
+        this.fieldPosition = fieldPosition;
     }
 
     // 카드 제출

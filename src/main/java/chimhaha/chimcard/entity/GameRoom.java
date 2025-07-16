@@ -1,6 +1,7 @@
 package chimhaha.chimcard.entity;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -38,6 +39,16 @@ public class GameRoom extends TimeStamped {
         this.player2 = player2;
         this.status = GameStatus.PLAYING;
         this.currentTurnPlayerId = whoIsFirst();
+    }
+
+    @Builder
+    public GameRoom(Long id, Account player1, Account player2, GameStatus status, Long currentTurnPlayerId, Long winnerId) {
+        this.id = id;
+        this.player1 = player1;
+        this.player2 = player2;
+        this.status = status;
+        this.currentTurnPlayerId = currentTurnPlayerId;
+        this.winnerId = winnerId;
     }
 
     private Long whoIsFirst() {

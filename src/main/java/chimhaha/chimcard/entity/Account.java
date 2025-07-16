@@ -38,7 +38,8 @@ public class Account extends TimeStamped {
     private Long version;
 
     @Builder
-    public Account(String username, String password, String nickname,Integer point, AccountRole role) {
+    public Account(Long id, String username, String password, String nickname,Integer point, AccountRole role) {
+        this.id = id;
         this.username = username;
         this.password = password;
         this.nickname = nickname;
