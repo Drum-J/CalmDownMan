@@ -51,7 +51,7 @@ public class GameService {
     }
 
     @Transactional
-    public void playCard(Long gameRoomId, Long playerId, Long gameCardId) {
+    public void cardSubmit(Long gameRoomId, Long playerId, Long gameCardId) {
         GameRoom gameRoom = getGameRoomAndValidateTurn(gameRoomId, playerId);
         GameCard gameCard = getGameCardAndValidate(playerId, gameCardId);
 
@@ -76,6 +76,11 @@ public class GameService {
 
         // 3. 전투 발생 확인 및 처리
         // 필드에 카드가 가득 찼을때 즉시 승부!
+        /**
+         * TODO: 카드 제출(cardSubmit)과 카드 승부(battle)을 추후에 분리할 수도 있음.
+         *  GameCard.id 값을 message로 전달.
+         *  gameCard.id 값이 있을 경우 클라이언트에서 battle()을 호출 할 수 있도록 코드 변경 필요
+         */
         Long winnerId = null;
         if (mutableCards.size() == 6) {
             GameCard player1Card = getPlayer1Card(mutableCards, player1Id);
@@ -90,6 +95,7 @@ public class GameService {
 
         // 5. WebSocket으로 게임 상태 업데이트 브로드캐스트 (TODO: GameUpdateDto 구현 필요)
         // messagingTemplate.convertAndSend("/topic/game/" + gameRoomId, new GameUpdateDto(...));
+        // message로 보낼 내용:  message, 다음 턴, winnerId
     }
 
     /**

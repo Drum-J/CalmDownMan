@@ -63,7 +63,7 @@ class GameServiceTest {
 
     @Test
     @DisplayName("player1 카드 제출 성공")
-    void playCard_Success() {
+    void cardSubmit_Success() {
         // given
         given(gameRoomRepository.findWithPlayersById(anyLong())).willReturn(Optional.of(gameRoom));
         given(gameCardRepository.findById(anyLong())).willReturn(Optional.of(gameCardInHand));
@@ -72,7 +72,7 @@ class GameServiceTest {
 
         // when
         // player1의 카드 제출
-        gameService.playCard(gameRoom.getId(), player1.getId(), gameCardInHand.getId());
+        gameService.cardSubmit(gameRoom.getId(), player1.getId(), gameCardInHand.getId());
 
         // then
         assertEquals(FIELD, gameCardInHand.getLocation());
@@ -82,7 +82,7 @@ class GameServiceTest {
 
     @Test
     @DisplayName("자신의 턴이 아닐 때 카드 제출 시 예외 발생")
-    void playCard_Fail_NotMyTurn() {
+    void cardSubmit_Fail_NotMyTurn() {
         // given
         gameRoom.changeTurn(); // 턴을 player2에게 넘김
         given(gameRoomRepository.findWithPlayersById(anyLong())).willReturn(Optional.of(gameRoom));
@@ -91,7 +91,7 @@ class GameServiceTest {
         assertAll(
                 () -> {
                     IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                        gameService.playCard(gameRoom.getId(), player1.getId(), gameCardInHand.getId());
+                        gameService.cardSubmit(gameRoom.getId(), player1.getId(), gameCardInHand.getId());
                     });
                     assertEquals("현재 턴이 아닙니다.", exception.getMessage());
                 }
@@ -100,7 +100,7 @@ class GameServiceTest {
 
     @Test
     @DisplayName("필드 카드 전진 테스트")
-    void playCard_AdvanceFieldCard() {
+    void cardSubmit() {
         // given
         // 기존 필드에 깔린 카드
         GameCard oldCard = GameCard.builder()
@@ -118,7 +118,7 @@ class GameServiceTest {
 
         // when
         // 손에 있던 카드 제출
-        gameService.playCard(gameRoom.getId(), player1.getId(), gameCardInHand.getId());
+        gameService.cardSubmit(gameRoom.getId(), player1.getId(), gameCardInHand.getId());
 
         // then
         assertEquals(2, oldCard.getFieldPosition()); // 기존 카드는 2번 위치로 전진
@@ -127,7 +127,7 @@ class GameServiceTest {
 
     @Test
     @DisplayName("두 카드가 만나서 battle 메서드 발생")
-    void playCardAndBattle() throws Exception {
+    void cardSubmitAndBattle() throws Exception {
         //given
         // p2 턴으로 변경
         gameRoom.changeTurn();
@@ -147,7 +147,7 @@ class GameServiceTest {
         given(gameCardRepository.findWithCardByGameRoomAndLocation(anyLong(), any(CardLocation.class))).willReturn(List.of(p1Card1, p1Card2, p1Card3, p2Card1, p2Card2));
 
         //when
-        gameService.playCard(gameRoom.getId(), player2.getId(), p2Card3.getId()); // p2 카드 제출
+        gameService.cardSubmit(gameRoom.getId(), player2.getId(), p2Card3.getId()); // p2 카드 제출
 
         //then
         assertAll(
@@ -167,7 +167,7 @@ class GameServiceTest {
 
     @Test
     @DisplayName("필드 배틀 테스트 - P1 승리")
-    void battle_P1_Wins() {
+    void fieldBattle() {
         // given
         gameCardInHand.handToField(1); // p1의 카드 필드 제출
         GameCard p2Card = GameCard.builder().id(202L).playerId(player2.getId()).card(card2).fieldPosition(6).build();
