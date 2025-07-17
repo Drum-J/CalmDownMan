@@ -23,8 +23,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // 클라이언트가 WebSocket 연결을 시작할 엔드포인트를 설정합니다.
-        // 예를 들어, JavaScript에서 `new SockJS("/ws-stomp")` 와 같이 연결을 시도할 수 있습니다.
-        // .withSockJS()는 WebSocket을 지원하지 않는 브라우저에서도 비슷한 경험을 제공하기 위한 옵션입니다.
-        registry.addEndpoint("/ws-stomp").withSockJS();
+        registry
+                .addEndpoint("/ws-connection")
+                .setAllowedOrigins("*") //cors
+                ;
     }
 }
