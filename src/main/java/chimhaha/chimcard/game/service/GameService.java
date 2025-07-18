@@ -5,8 +5,9 @@ import chimhaha.chimcard.entity.CardLocation;
 import chimhaha.chimcard.entity.GameCard;
 import chimhaha.chimcard.entity.GameRoom;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
-import chimhaha.chimcard.game.dto.CardSubmitResponseDto;
+import chimhaha.chimcard.game.dto.MessageDto;
 import chimhaha.chimcard.game.dto.GameInfoDto;
+import chimhaha.chimcard.game.dto.GameResultDto;
 import chimhaha.chimcard.game.dto.MyGameCardDto;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
@@ -18,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static java.util.Comparator.comparingInt;
 
@@ -90,14 +93,13 @@ public class GameService {
             GameCard player2Card = getPlayer2Card(mutableCards, player1Id);
             if (player1Card != null && player1Card.getFieldPosition() == 6) {
                 // player1이 모든 필드를 차지
-                // messagingTemplate.convertAndSend("topic/game/" + gameRoomId, new GameResultDto());
-                // message: String message(GAME RESULT),Long finalWinnerId
+                sendMessage(gameRoomId, new GameResultDto(player1Card.getPlayerId()));
                 return;
             }
 
             if (player2Card != null && player2Card.getFieldPosition() == 1) {
                 // player2가 모든 필드를 차지
-                // message 발송
+                sendMessage(gameRoomId, new GameResultDto(player2Card.getPlayerId()));
                 return;
             }
 
@@ -106,13 +108,7 @@ public class GameService {
             }
         }
 
-        Long finalWinner = null;
-        if (winnerId != null) {
-            // 카드 승부가 진행되었다면 게임의 승패도 결정됐는지 파악.
-            // winnerId가 0인 경우에는 한 사람의 플레이어로 판단 못함.
-            // gameRoomId로 해당 게임의 무덤 카드를 전부 들고와서 각 플레이어별로 분류 후 갯수(size)를 파악
-            // 7이 된 플레이어가 짐.
-            // message 발송
+        if (winnerId != null && checkGraveCard(gameRoom)) {
             return;
         }
 
@@ -120,12 +116,12 @@ public class GameService {
         Long nextTurnPlayerId = gameRoom.changeTurn();
 
         // 5. WebSocket으로 게임 상태 업데이트 브로드캐스트
-        messagingTemplate.convertAndSend("/topic/game/" + gameRoomId,
-                new CardSubmitResponseDto("CARD SUBMIT RESULT", gameRoomId, nextTurnPlayerId, winnerId));
+        sendMessage(gameRoomId, MessageDto.cardSubmitSuccess(nextTurnPlayerId, winnerId));
     }
 
     /**
      * 필드 카드로 직접 배틀 실행
+     * 카드의 fieldPosition과 상관없이 가장 앞에 있는 카드로 승부
      */
     @Transactional
     public void fieldBattle(Long gameRoomId, Long playerId) {
@@ -141,7 +137,13 @@ public class GameService {
             winnerId = battle(gameRoom, player1Card, player2Card);
         }
 
-        gameRoom.changeTurn();
+        if (winnerId != null && checkGraveCard(gameRoom)) {
+            return;
+        }
+
+        Long nextTurnPlayerId = gameRoom.changeTurn();
+
+        sendMessage(gameRoomId, MessageDto.fieldBattleResult(nextTurnPlayerId, winnerId));
     }
 
     private Long battle(GameRoom gameRoom, GameCard player1Card, GameCard player2Card) {
@@ -167,6 +169,46 @@ public class GameService {
         }
 
         return winnerId;
+    }
+
+    private boolean checkGraveCard(GameRoom gameRoom) {
+        List<GameCard> graveCards = gameCardRepository.findWithCardByGameRoomAndLocation(gameRoom.getId(), CardLocation.GRAVE);
+        Map<Long, Long> graveCardCountMap = graveCards.stream()
+                .collect(Collectors.groupingBy(GameCard::getPlayerId, Collectors.counting()));
+
+        log.info("graveCardCountMap: {}", graveCardCountMap);
+
+        List<Long> loserIds = new ArrayList<>();
+        for (Map.Entry<Long, Long> entry : graveCardCountMap.entrySet()) {
+            Long playerId = entry.getKey();
+            Long graveCardCount = entry.getValue();
+
+            if (graveCardCount == 7L) {
+                loserIds.add(playerId);
+            }
+        }
+
+        /**
+         * 양 플레이어의 카드가 모두 무덤으로 이동했을 경우
+         * fieldBattle 에서 마지막으로 승부한 카드가 최종 무승부로 동시에 무덤으로 이동할 경우가 발생할 수 있다.
+         */
+        if (loserIds.size() == 2) {
+            sendMessage(gameRoom.getId(), GameResultDto.drawGame());
+            return true;
+        } else if (loserIds.size() == 1) {
+            Long loserId = loserIds.getFirst();
+            Long winnerId = gameRoom.getPlayer1().getId().equals(loserId)
+                    ? gameRoom.getPlayer2().getId()
+                    : gameRoom.getPlayer1().getId();
+            sendMessage(gameRoom.getId(), new GameResultDto(winnerId));
+            return true;
+        }
+
+        return false;
+    }
+
+    private <T> void sendMessage(Long gameRoomId, T message) {
+        messagingTemplate.convertAndSend("/topic/game" + gameRoomId, message);
     }
 
     private GameRoom getGameRoomAndValidateTurn(Long gameRoomId, Long playerId) {
