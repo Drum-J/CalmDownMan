@@ -5,6 +5,7 @@ import chimhaha.chimcard.entity.CardLocation;
 import chimhaha.chimcard.entity.GameCard;
 import chimhaha.chimcard.entity.GameRoom;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
+import chimhaha.chimcard.game.dto.CardSubmitResponseDto;
 import chimhaha.chimcard.game.dto.GameInfoDto;
 import chimhaha.chimcard.game.dto.MyGameCardDto;
 import chimhaha.chimcard.game.repository.GameCardRepository;
@@ -78,24 +79,49 @@ public class GameService {
         // 필드에 카드가 가득 찼을때 즉시 승부!
         /**
          * TODO: 카드 제출(cardSubmit)과 카드 승부(battle)을 추후에 분리할 수도 있음.
-         *  GameCard.id 값을 message로 전달.
+         *  ex)GameCard.id 값을 message로 전달.
          *  gameCard.id 값이 있을 경우 클라이언트에서 battle()을 호출 할 수 있도록 코드 변경 필요
+         *  현재는 battle이 발생했을 경우 winnerId가 null이 아님. winnerId가 0인 경우는 둘 다 무승부가 되어
+         *  카드가 무덤으로 이동
          */
         Long winnerId = null;
         if (mutableCards.size() == 6) {
             GameCard player1Card = getPlayer1Card(mutableCards, player1Id);
             GameCard player2Card = getPlayer2Card(mutableCards, player1Id);
+            if (player1Card != null && player1Card.getFieldPosition() == 6) {
+                // player1이 모든 필드를 차지
+                // messagingTemplate.convertAndSend("topic/game/" + gameRoomId, new GameResultDto());
+                // message: String message(GAME RESULT),Long finalWinnerId
+                return;
+            }
+
+            if (player2Card != null && player2Card.getFieldPosition() == 1) {
+                // player2가 모든 필드를 차지
+                // message 발송
+                return;
+            }
+
             if (player1Card != null && player2Card != null) {
                 winnerId = battle(gameRoom, player1Card, player2Card);
             }
         }
 
-        // 4. 턴 넘기기
-        gameRoom.changeTurn();
+        Long finalWinner = null;
+        if (winnerId != null) {
+            // 카드 승부가 진행되었다면 게임의 승패도 결정됐는지 파악.
+            // winnerId가 0인 경우에는 한 사람의 플레이어로 판단 못함.
+            // gameRoomId로 해당 게임의 무덤 카드를 전부 들고와서 각 플레이어별로 분류 후 갯수(size)를 파악
+            // 7이 된 플레이어가 짐.
+            // message 발송
+            return;
+        }
 
-        // 5. WebSocket으로 게임 상태 업데이트 브로드캐스트 (TODO: GameUpdateDto 구현 필요)
-        // messagingTemplate.convertAndSend("/topic/game/" + gameRoomId, new GameUpdateDto(...));
-        // message로 보낼 내용:  message, 다음 턴, winnerId
+        // 4. 턴 넘기기
+        Long nextTurnPlayerId = gameRoom.changeTurn();
+
+        // 5. WebSocket으로 게임 상태 업데이트 브로드캐스트
+        messagingTemplate.convertAndSend("/topic/game/" + gameRoomId,
+                new CardSubmitResponseDto("CARD SUBMIT RESULT", gameRoomId, nextTurnPlayerId, winnerId));
     }
 
     /**

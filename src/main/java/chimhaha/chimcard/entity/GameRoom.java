@@ -72,8 +72,8 @@ public class GameRoom extends TimeStamped {
         finishGame();
     }
 
-    public void changeTurn() {
-        currentTurnPlayerId = currentTurnPlayerId.equals(player1.getId()) ?
+    public Long changeTurn() {
+        return currentTurnPlayerId = currentTurnPlayerId.equals(player1.getId()) ?
                 player2.getId() : player1.getId();
     }
 
