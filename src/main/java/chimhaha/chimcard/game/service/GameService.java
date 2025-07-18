@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static chimhaha.chimcard.common.MessageConstants.*;
 import static java.util.Comparator.comparingInt;
 
 @Slf4j
@@ -33,13 +34,14 @@ public class GameService {
     private final GameRoomRepository gameRoomRepository;
     private final GameCardRepository gameCardRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final GameResultAsyncService gameResultAsyncService;
 
     /**
      * 게임 입장 시 상대 닉네임과 내 게임 카드 로딩
      */
     public GameInfoDto gameInfo(Long gameRoomId, Long playerId) {
         GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId)
-                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 게임입니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(GAME_ROOM_NOT_FOUND));
 
         Account player1 = gameRoom.getPlayer1();
         Account player2 = gameRoom.getPlayer2();
@@ -60,7 +62,10 @@ public class GameService {
         processCardMove(gameRoom, gameCard);
         Long winnerId = checkForBattle(gameRoom);
 
-        if (checkGameEnd(gameRoom)) return;
+        if (checkGameEnd(gameRoom)) {
+            gameResultAsyncService.gameResult(gameRoomId);
+            return;
+        }
 
         Long nextTurnPlayerId = gameRoom.changeTurn();
         sendMessage(gameRoomId, MessageDto.cardSubmitSuccess(nextTurnPlayerId, winnerId));
@@ -85,6 +90,7 @@ public class GameService {
         }
 
         if (winnerId != null && checkGraveCard(gameRoom)) {
+            gameResultAsyncService.gameResult(gameRoomId);
             return;
         }
 
@@ -184,6 +190,7 @@ public class GameService {
             Long player1Id = gameRoom.getPlayer1().getId();
             long p1count = fieldCards.stream().filter(card -> card.getPlayerId().equals(player1Id)).count();
             if (p1count == 6L) {
+                gameRoom.gameWinner(player1Id);
                 sendMessage(gameRoom.getId(), new GameResultDto(player1Id));
                 return true;
             }
@@ -191,6 +198,7 @@ public class GameService {
             Long player2Id = gameRoom.getPlayer2().getId();
             long p2count = fieldCards.stream().filter(card -> card.getPlayerId().equals(player2Id)).count();
             if (p2count == 6L) {
+                gameRoom.gameWinner(player2Id);
                 sendMessage(gameRoom.getId(), new GameResultDto(player2Id));
                 return true;
             }
@@ -220,6 +228,7 @@ public class GameService {
         }
 
         if (loserIds.size() == 2) { // 무승부, 마지막으로 승부한 카드가 최종 무승부로 동시에 무덤으로 이동할 경우
+            gameRoom.finishGame(); // 무승부는 게임 상태만 변경 winnerId 는 null로 둔다.
             sendMessage(gameRoom.getId(), GameResultDto.drawGame());
             return true;
         } else if (loserIds.size() == 1) { // 승패 결정
@@ -227,6 +236,8 @@ public class GameService {
             Long winnerId = gameRoom.getPlayer1().getId().equals(loserId)
                     ? gameRoom.getPlayer2().getId()
                     : gameRoom.getPlayer1().getId();
+
+            gameRoom.gameWinner(winnerId);
             sendMessage(gameRoom.getId(), new GameResultDto(winnerId));
             return true;
         }
@@ -240,10 +251,10 @@ public class GameService {
 
     private GameRoom getGameRoomAndValidateTurn(Long gameRoomId, Long playerId) {
         GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId)
-                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 게임입니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(GAME_ROOM_NOT_FOUND));
 
         if (!gameRoom.getCurrentTurnPlayerId().equals(playerId)) {
-            throw new IllegalArgumentException("현재 턴이 아닙니다.");
+            throw new IllegalArgumentException(NOT_MY_TURN);
         }
 
         return gameRoom;
@@ -251,14 +262,14 @@ public class GameService {
 
     private GameCard getGameCardAndValidate(Long playerId, Long gameCardId) {
         GameCard gameCard = gameCardRepository.findById(gameCardId)
-                .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 게임 카드입니다."));
+                .orElseThrow(() -> new ResourceNotFoundException(GAME_CARD_NOT_FOUND));
 
         if (!gameCard.getPlayerId().equals(playerId)) {
-            throw new IllegalArgumentException("자신의 카드가 아닙니다.");
+            throw new IllegalArgumentException(NOT_MY_CARD);
         }
 
         if (gameCard.getLocation() != CardLocation.HAND) {
-            throw new IllegalArgumentException("손패에 있는 카드만 낼 수 있습니다.");
+            throw new IllegalArgumentException(NOT_IN_HAND);
         }
 
         return gameCard;
