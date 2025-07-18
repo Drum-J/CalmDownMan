@@ -146,7 +146,10 @@ class GameServiceTest {
         //repository 조회 결과
         given(gameRoomRepository.findWithPlayersById(anyLong())).willReturn(Optional.of(gameRoom));
         given(gameCardRepository.findById(206L)).willReturn(Optional.of(p2Card3));
-        given(gameCardRepository.findWithCardByGameRoomAndLocation(anyLong(), any(CardLocation.class))).willReturn(List.of(p1Card1, p1Card2, p1Card3, p2Card1, p2Card2));
+        given(gameCardRepository.findWithCardByGameRoomAndLocation(anyLong(), any(CardLocation.class)))
+                .willReturn(List.of(p1Card1, p1Card2, p1Card3, p2Card1, p2Card2)) // 첫번째 조회
+                .willReturn(List.of(p1Card1, p1Card2, p1Card3, p2Card1, p2Card2, p2Card3)) // 두번째 조회
+        ;
 
         //when
         gameService.cardSubmit(gameRoom.getId(), player2.getId(), p2Card3.getId()); // p2 카드 제출

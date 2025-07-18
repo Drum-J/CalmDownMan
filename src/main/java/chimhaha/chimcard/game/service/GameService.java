@@ -38,16 +38,14 @@ public class GameService {
      * 게임 입장 시 상대 닉네임과 내 게임 카드 로딩
      */
     public GameInfoDto gameInfo(Long gameRoomId, Long playerId) {
-        GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId) // fetchJoin 으로 조회
+        GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId)
                 .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 게임입니다."));
 
         Account player1 = gameRoom.getPlayer1();
         Account player2 = gameRoom.getPlayer2();
 
-        // 상대 닉네임 가져오기
         String otherPlayer = player1.getId().equals(playerId) ? player2.getNickname() : player1.getNickname();
 
-        // 내 카드 가져오기
         List<MyGameCardDto> myCards = gameCardRepository.findWithCardByGameRoomAndPlayerId(gameRoomId, playerId)
                 .stream().map(card -> new MyGameCardDto(card.getId(),card.getCard())).toList();
 
@@ -59,63 +57,12 @@ public class GameService {
         GameRoom gameRoom = getGameRoomAndValidateTurn(gameRoomId, playerId);
         GameCard gameCard = getGameCardAndValidate(playerId, gameCardId);
 
-        // 2. 카드 제출 처리
-        // 필드에 있는 모든 카드 가져오기
-        List<GameCard> fieldCards = gameCardRepository.findWithCardByGameRoomAndLocation(gameRoom.getId(), CardLocation.FIELD);
-        List<GameCard> mutableCards = new ArrayList<>(fieldCards); // 새로 제출한 카드도 추가하기 위해 복사해서 mutable로 만듬
-        // 기존 필드 카드 전진 player1은 [1] -> [6] / player2는 [1] <- [6] 로 움직임
-        Long player1Id = gameRoom.getPlayer1().getId();
-        for (GameCard fieldCard : mutableCards) {
-            if (player1Id.equals(playerId)) { // Player1의 카드
-                fieldCard.moveRight();
-            } else { // Player2의 카드
-                fieldCard.moveLeft();
-            }
-        }
+        processCardMove(gameRoom, gameCard);
+        Long winnerId = checkForBattle(gameRoom);
 
-        // 새 카드 필드에 배치
-        int initialPosition = (player1Id.equals(playerId)) ? 1 : 6;
-        gameCard.handToField(initialPosition);
-        mutableCards.add(gameCard);
+        if (checkGameEnd(gameRoom)) return;
 
-        // 3. 전투 발생 확인 및 처리
-        // 필드에 카드가 가득 찼을때 즉시 승부!
-        /**
-         * TODO: 카드 제출(cardSubmit)과 카드 승부(battle)을 추후에 분리할 수도 있음.
-         *  ex)GameCard.id 값을 message로 전달.
-         *  gameCard.id 값이 있을 경우 클라이언트에서 battle()을 호출 할 수 있도록 코드 변경 필요
-         *  현재는 battle이 발생했을 경우 winnerId가 null이 아님. winnerId가 0인 경우는 둘 다 무승부가 되어
-         *  카드가 무덤으로 이동
-         */
-        Long winnerId = null;
-        if (mutableCards.size() == 6) {
-            GameCard player1Card = getPlayer1Card(mutableCards, player1Id);
-            GameCard player2Card = getPlayer2Card(mutableCards, player1Id);
-            if (player1Card != null && player1Card.getFieldPosition() == 6) {
-                // player1이 모든 필드를 차지
-                sendMessage(gameRoomId, new GameResultDto(player1Card.getPlayerId()));
-                return;
-            }
-
-            if (player2Card != null && player2Card.getFieldPosition() == 1) {
-                // player2가 모든 필드를 차지
-                sendMessage(gameRoomId, new GameResultDto(player2Card.getPlayerId()));
-                return;
-            }
-
-            if (player1Card != null && player2Card != null) {
-                winnerId = battle(gameRoom, player1Card, player2Card);
-            }
-        }
-
-        if (winnerId != null && checkGraveCard(gameRoom)) {
-            return;
-        }
-
-        // 4. 턴 넘기기
         Long nextTurnPlayerId = gameRoom.changeTurn();
-
-        // 5. WebSocket으로 게임 상태 업데이트 브로드캐스트
         sendMessage(gameRoomId, MessageDto.cardSubmitSuccess(nextTurnPlayerId, winnerId));
     }
 
@@ -134,7 +81,7 @@ public class GameService {
 
         Long winnerId = null;
         if (player1Card != null && player2Card != null) {
-            winnerId = battle(gameRoom, player1Card, player2Card);
+            winnerId = battle(player1Card, player2Card);
         }
 
         if (winnerId != null && checkGraveCard(gameRoom)) {
@@ -146,7 +93,52 @@ public class GameService {
         sendMessage(gameRoomId, MessageDto.fieldBattleResult(nextTurnPlayerId, winnerId));
     }
 
-    private Long battle(GameRoom gameRoom, GameCard player1Card, GameCard player2Card) {
+    /**
+     * 카드 제출 및 필드 카드 이동
+     */
+    private void processCardMove(GameRoom gameRoom, GameCard gameCard) {
+        Long playerId = gameCard.getPlayerId();
+        Long player1Id = gameRoom.getPlayer1().getId();
+
+        // 필드에 있는 모든 카드 가져오기
+        List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
+        // 기존 필드 카드 전진 player1은 [1] -> [6] / player2는 [1] <- [6] 로 움직임
+        for (GameCard fieldCard : fieldCards) {
+            if (player1Id.equals(playerId)) { // Player1의 카드
+                fieldCard.moveRight();
+            } else { // Player2의 카드
+                fieldCard.moveLeft();
+            }
+        }
+
+        // 새 카드 필드에 배치
+        int initialPosition = (player1Id.equals(playerId)) ? 1 : 6;
+        gameCard.handToField(initialPosition);
+    }
+
+    /**
+     * 카드 승부 발생 체크
+     */
+    private Long checkForBattle(GameRoom gameRoom) {
+        List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
+
+        if (fieldCards.size() == 6) {
+            Long player1Id = gameRoom.getPlayer1().getId();
+            GameCard player1Card = getPlayer1Card(fieldCards, player1Id);
+            GameCard player2Card = getPlayer2Card(fieldCards, player1Id);
+
+            if (player1Card != null && player2Card != null) {
+                return battle(player1Card, player2Card);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 두 카드의 승패를 결정
+     */
+    private Long battle(GameCard player1Card, GameCard player2Card) {
         Long winnerId = 0L;
         int result = player1Card.getCard().match(player2Card.getCard());
         switch (result) {
@@ -171,8 +163,47 @@ public class GameService {
         return winnerId;
     }
 
+    /**
+     * 게임 승패 체크
+     */
+    private boolean checkGameEnd(GameRoom gameRoom) {
+        if (checkFieldCondition(gameRoom)) {
+            return true;
+        }
+
+        return checkGraveCard(gameRoom);
+    }
+
+    /**
+     * 게임 승패 조건 1. 한 플레이어가 모든 필드를 차지했는가?
+     */
+    private boolean checkFieldCondition(GameRoom gameRoom) {
+        List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
+
+        if (fieldCards.size() == 6) {
+            Long player1Id = gameRoom.getPlayer1().getId();
+            long p1count = fieldCards.stream().filter(card -> card.getPlayerId().equals(player1Id)).count();
+            if (p1count == 6L) {
+                sendMessage(gameRoom.getId(), new GameResultDto(player1Id));
+                return true;
+            }
+
+            Long player2Id = gameRoom.getPlayer2().getId();
+            long p2count = fieldCards.stream().filter(card -> card.getPlayerId().equals(player2Id)).count();
+            if (p2count == 6L) {
+                sendMessage(gameRoom.getId(), new GameResultDto(player2Id));
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 게임 승패 조건 2. 한 플레이어의 카드가 모두 무덤에 갔는가?
+     */
     private boolean checkGraveCard(GameRoom gameRoom) {
-        List<GameCard> graveCards = gameCardRepository.findWithCardByGameRoomAndLocation(gameRoom.getId(), CardLocation.GRAVE);
+        List<GameCard> graveCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.GRAVE);
         Map<Long, Long> graveCardCountMap = graveCards.stream()
                 .collect(Collectors.groupingBy(GameCard::getPlayerId, Collectors.counting()));
 
@@ -188,14 +219,10 @@ public class GameService {
             }
         }
 
-        /**
-         * 양 플레이어의 카드가 모두 무덤으로 이동했을 경우
-         * fieldBattle 에서 마지막으로 승부한 카드가 최종 무승부로 동시에 무덤으로 이동할 경우가 발생할 수 있다.
-         */
-        if (loserIds.size() == 2) {
+        if (loserIds.size() == 2) { // 무승부, 마지막으로 승부한 카드가 최종 무승부로 동시에 무덤으로 이동할 경우
             sendMessage(gameRoom.getId(), GameResultDto.drawGame());
             return true;
-        } else if (loserIds.size() == 1) {
+        } else if (loserIds.size() == 1) { // 승패 결정
             Long loserId = loserIds.getFirst();
             Long winnerId = gameRoom.getPlayer1().getId().equals(loserId)
                     ? gameRoom.getPlayer2().getId()
@@ -226,12 +253,10 @@ public class GameService {
         GameCard gameCard = gameCardRepository.findById(gameCardId)
                 .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 게임 카드입니다."));
 
-        // 카드 소유자 확인
         if (!gameCard.getPlayerId().equals(playerId)) {
             throw new IllegalArgumentException("자신의 카드가 아닙니다.");
         }
 
-        // 카드가 손패에 있는지 확인
         if (gameCard.getLocation() != CardLocation.HAND) {
             throw new IllegalArgumentException("손패에 있는 카드만 낼 수 있습니다.");
         }
@@ -251,5 +276,9 @@ public class GameService {
                 .filter(card -> !card.getPlayerId().equals(player1Id))
                 .min(comparingInt(GameCard::getFieldPosition))
                 .orElse(null);
+    }
+
+    private List<GameCard> getGameCardsInLocation(Long gameRoomId, CardLocation location) {
+        return gameCardRepository.findWithCardByGameRoomAndLocation(gameRoomId, location);
     }
 }
