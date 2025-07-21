@@ -1,6 +1,5 @@
 package chimhaha.chimcard.game.event;
 
-import chimhaha.chimcard.game.event.PlayerMatchingJoinEvent;
 import chimhaha.chimcard.game.service.GameMatchingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class GameScheduler {
+public class GameEventListener {
 
     private final GameMatchingService gameMatchingService;
     private final SimpMessageSendingOperations messagingTemplate;
