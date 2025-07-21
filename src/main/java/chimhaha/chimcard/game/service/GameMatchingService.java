@@ -13,8 +13,10 @@ import chimhaha.chimcard.game.repository.GameRoomRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import chimhaha.chimcard.game.event.PlayerMatchingJoinEvent;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +38,7 @@ public class GameMatchingService {
     private final GameCardRepository gameCardRepository;
     private final AccountRepository accountRepository;
     private final CardRepository cardRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final Map<Long, MatchingRequestDto> matchingMap = new ConcurrentHashMap<>();
     private final Queue<MatchingRequestDto> matchingQueue = new LinkedBlockingQueue<>();
@@ -51,6 +54,7 @@ public class GameMatchingService {
 
             matchingMap.put(dto.playerId(), dto);
             matchingQueue.add(dto);
+            eventPublisher.publishEvent(new PlayerMatchingJoinEvent(this, dto));
         } finally {
             lock.unlock();
         }
