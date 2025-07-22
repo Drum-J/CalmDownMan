@@ -5,10 +5,8 @@ import chimhaha.chimcard.entity.CardLocation;
 import chimhaha.chimcard.entity.GameCard;
 import chimhaha.chimcard.entity.GameRoom;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
-import chimhaha.chimcard.game.dto.MessageDto;
-import chimhaha.chimcard.game.dto.GameInfoDto;
-import chimhaha.chimcard.game.dto.GameResultDto;
-import chimhaha.chimcard.game.dto.MyGameCardDto;
+import chimhaha.chimcard.game.dto.*;
+import chimhaha.chimcard.game.dto.message.SubmitMessageDto;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -64,15 +63,14 @@ public class GameService {
         GameCard gameCard = getGameCardAndValidate(playerId, gameCardId);
 
         processCardMove(gameRoom, gameCard);
-        Long winnerId = checkForBattle(gameRoom);
-
-        if (checkGameEnd(gameRoom)) {
-            gameResultAsyncService.gameResult(gameRoomId);
+        gameRoom.increaseTurnCount();
+        if (checkFieldCondition(gameRoom)) {
+            gameResultAsyncService.gameResult(gameRoomId); // 이벤트 형식으로 변경 필요
             return;
         }
 
-        Long nextTurnPlayerId = gameRoom.changeTurn();
-        sendMessage(gameRoomId, MessageDto.cardSubmitSuccess(nextTurnPlayerId, winnerId));
+        gameRoom.changeTurn();
+        createSubmitMessage(gameRoom, playerId);
     }
 
     /**
@@ -127,22 +125,91 @@ public class GameService {
     }
 
     /**
+     * 각 플레이어에게 보낼 매세지 생성
+     */
+    private void createSubmitMessage(GameRoom gameRoom, Long currentPlayerId) {
+        List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
+        BattleCard battleCard = checkForBattle(fieldCards, gameRoom.getPlayer1().getId());
+
+        Long nextPlayerId = gameRoom.getCurrentTurnPlayerId();
+        Map<Integer, FieldCardDto> cardMap1 = createFieldCardMapForPlayer(fieldCards, currentPlayerId, gameRoom.getTurnCount(), battleCard);
+        Map<Integer, FieldCardDto> cardMap2 = createFieldCardMapForPlayer(fieldCards, nextPlayerId, gameRoom.getTurnCount(), battleCard);
+
+        // 현재 플레이어의 핸드 조회
+        List<MyGameCardDto> myHandCards = getCurrentHandCards(gameRoom, currentPlayerId);
+
+        // 현재 플레이어에게 메세지 전송 (수신자, DTO[다음 턴, 필드 카드, 카드 전투 가능 여부, 내 핸드])
+        sendSubmitMessage(currentPlayerId,
+                new SubmitMessageDto(nextPlayerId, cardMap1,battleCard != null, myHandCards));
+        // 다음 플레이어에게 메세지 전송 (수신자, DTO[다음 턴, 필드 카드, 카드 전투 가능 여부, 내 핸드(null)])
+        sendSubmitMessage(nextPlayerId,
+                new SubmitMessageDto(nextPlayerId, cardMap2, battleCard != null, null));
+    }
+
+    /**
+     * 각 플레이어 별 필드 카드 데이터
+     */
+    private Map<Integer, FieldCardDto> createFieldCardMapForPlayer(List<GameCard> fieldCards, Long playerId, int turnCount, BattleCard battleCard) {
+        Map<Integer, FieldCardDto> maps = new HashMap<>();
+
+        for (GameCard gameCard : fieldCards) {
+            // 필드 카드가 내 것인지 확인
+            boolean isMine = gameCard.getPlayerId().equals(playerId);
+
+            // 앞면 표시 여부 확인
+            // 1. 각 플레이어가 처음으로 제출한 카드
+            if (turnCount == 2 && (gameCard.getFieldPosition() == 1 || gameCard.getFieldPosition() == 6)) {
+                gameCard.turnFront();
+            }
+            // 2. 카드 전투가 가능한 카드
+            if (battleCard != null && (gameCard.getId().equals(battleCard.gameCardId1) || gameCard.getId().equals(battleCard.gameCardId2))) {
+                gameCard.turnFront();
+            }
+
+            FieldCardDto dto = new FieldCardDto(gameCard, isMine);
+            maps.put(gameCard.getFieldPosition(), dto);
+        }
+
+        return maps;
+    }
+
+    /**
+     * 플레이어의 현재 핸드 조회
+     */
+    private List<MyGameCardDto> getCurrentHandCards(GameRoom gameRoom, Long playerId) {
+        return getGameCardsInLocation(gameRoom.getId(), CardLocation.HAND)
+                .stream().filter(card -> card.getPlayerId().equals(playerId))
+                .map(card -> new MyGameCardDto(card.getId(), card.getCard()))
+                .toList();
+    }
+
+    /**
+     * 카드 제출 결과 메세지 전송
+     */
+    private void sendSubmitMessage(Long playerId, SubmitMessageDto data) {
+        messagingTemplate.convertAndSend("/queue/game/" + playerId, data);
+    }
+
+    /**
      * 카드 승부 발생 체크
      */
-    private Long checkForBattle(GameRoom gameRoom) {
-        List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
-
+    private BattleCard checkForBattle(List<GameCard> fieldCards, Long player1Id) {
         if (fieldCards.size() == 6) {
-            Long player1Id = gameRoom.getPlayer1().getId();
             GameCard player1Card = getPlayer1Card(fieldCards, player1Id);
             GameCard player2Card = getPlayer2Card(fieldCards, player1Id);
 
             if (player1Card != null && player2Card != null) {
-                return battle(player1Card, player2Card);
+                return new BattleCard(player1Card, player2Card);
             }
         }
 
         return null;
+    }
+
+    private record BattleCard(Long gameCardId1, Long gameCardId2) {
+        public BattleCard(GameCard gameCard1, GameCard gameCard2) {
+            this(gameCard1.getId(), gameCard2.getId());
+        }
     }
 
     /**
