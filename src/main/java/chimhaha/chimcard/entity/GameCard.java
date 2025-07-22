@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 import static jakarta.persistence.FetchType.LAZY;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
@@ -30,6 +32,7 @@ public class GameCard extends TimeStamped {
     private CardLocation location = CardLocation.HAND;
 
     private Integer fieldPosition;
+    private boolean isFront = false;
 
     public GameCard(GameRoom gameRoom, Long playerId, Card card) {
         this.gameRoom = gameRoom;
@@ -65,5 +68,20 @@ public class GameCard extends TimeStamped {
     public void toGrave() {
         this.location = CardLocation.GRAVE;
         this.fieldPosition = null;
+    }
+
+    public void turnFront() {
+        isFront = true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof GameCard gameCard)) return false;
+        return Objects.equals(id, gameCard.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 }

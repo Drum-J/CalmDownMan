@@ -34,6 +34,8 @@ public class GameRoom extends TimeStamped {
 
     private Long winnerId; // 게임 승자
 
+    private int turnCount = 0; // 게임턴이 2일때 카드를 앞면으로 변경, 즉 각 플레이어가 한차례씩 카드를 제출하고 나면 카드를 앞면으로 바꿔야 함.
+
     public GameRoom(Account player1, Account player2) {
         this.player1 = player1;
         this.player2 = player2;
@@ -72,9 +74,13 @@ public class GameRoom extends TimeStamped {
         finishGame();
     }
 
-    public Long changeTurn() {
-        return currentTurnPlayerId = currentTurnPlayerId.equals(player1.getId()) ?
+    public void changeTurn() {
+        currentTurnPlayerId = currentTurnPlayerId.equals(player1.getId()) ?
                 player2.getId() : player1.getId();
+    }
+
+    public void increaseTurnCount() {
+        turnCount++;
     }
 
     @Override
