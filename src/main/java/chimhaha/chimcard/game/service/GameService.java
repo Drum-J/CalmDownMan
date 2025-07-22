@@ -174,17 +174,6 @@ public class GameService {
     }
 
     /**
-     * 게임 승패 체크
-     */
-    private boolean checkGameEnd(GameRoom gameRoom) {
-        if (checkFieldCondition(gameRoom)) {
-            return true;
-        }
-
-        return checkGraveCard(gameRoom);
-    }
-
-    /**
      * 게임 승패 조건 1. 한 플레이어가 모든 필드를 차지했는가?
      */
     private boolean checkFieldCondition(GameRoom gameRoom) {
@@ -192,16 +181,16 @@ public class GameService {
 
         if (fieldCards.size() == 6) {
             Long player1Id = gameRoom.getPlayer1().getId();
-            long p1count = fieldCards.stream().filter(card -> card.getPlayerId().equals(player1Id)).count();
-            if (p1count == 6L) {
+            Long player2Id = gameRoom.getPlayer2().getId();
+
+            Map<Long, Long> fieldCardMap = fieldCards.stream()
+                    .collect(Collectors.groupingBy(GameCard::getPlayerId, Collectors.counting()));
+
+            if (fieldCardMap.get(player1Id) == 6L) {
                 gameRoom.gameWinner(player1Id);
                 sendMessage(gameRoom.getId(), new GameResultDto(player1Id));
                 return true;
-            }
-
-            Long player2Id = gameRoom.getPlayer2().getId();
-            long p2count = fieldCards.stream().filter(card -> card.getPlayerId().equals(player2Id)).count();
-            if (p2count == 6L) {
+            } else if (fieldCardMap.get(player2Id) == 6L) {
                 gameRoom.gameWinner(player2Id);
                 sendMessage(gameRoom.getId(), new GameResultDto(player2Id));
                 return true;
