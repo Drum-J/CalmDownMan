@@ -11,6 +11,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequiredArgsConstructor
@@ -19,6 +20,7 @@ public class GameController {
     private final GameService gameService;
 
     @GetMapping("/api/game/{gameRoomId}")
+    @ResponseBody
     public ApiResponse<GameInfoDto> gameInfo(@PathVariable("gameRoomId") Long gameRoomId) {
         Long playerId = AccountUtils.getAccountId();
 

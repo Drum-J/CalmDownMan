@@ -2,5 +2,6 @@ package chimhaha.chimcard.game.dto;
 
 import java.util.List;
 
-public record GameInfoDto(String otherPlayer, List<MyGameCardDto> myCards, Long currentTurnPlayerId) {
+public record GameInfoDto(String otherPlayer, List<MyGameCardDto> myCards, Long currentTurnPlayerId,
+                          Long player1Id, Long player2Id) {
 }

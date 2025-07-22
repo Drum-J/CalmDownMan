@@ -46,12 +46,16 @@ public class GameService {
         Account player1 = gameRoom.getPlayer1();
         Account player2 = gameRoom.getPlayer2();
 
+        if (!(player1.getId().equals(playerId) || player2.getId().equals(playerId))) {
+            throw new IllegalArgumentException(NOT_MY_GAME);
+        }
+
         String otherPlayer = player1.getId().equals(playerId) ? player2.getNickname() : player1.getNickname();
 
         List<MyGameCardDto> myCards = gameCardRepository.findWithCardByGameRoomAndPlayerId(gameRoomId, playerId)
                 .stream().map(card -> new MyGameCardDto(card.getId(),card.getCard())).toList();
 
-        return new GameInfoDto(otherPlayer, myCards, gameRoom.getCurrentTurnPlayerId());
+        return new GameInfoDto(otherPlayer, myCards, gameRoom.getCurrentTurnPlayerId(), player1.getId(), player2.getId());
     }
 
     @Transactional
