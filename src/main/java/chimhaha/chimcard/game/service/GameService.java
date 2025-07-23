@@ -8,10 +8,12 @@ import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.*;
 import chimhaha.chimcard.game.dto.message.BattleMessageDto;
 import chimhaha.chimcard.game.dto.message.SubmitMessageDto;
+import chimhaha.chimcard.game.event.GameEndEvent;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,7 @@ public class GameService {
     private final GameCardRepository gameCardRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final GameResultAsyncService gameResultAsyncService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 게임 입장 시 상대 닉네임과 내 게임 카드 로딩
@@ -66,7 +69,7 @@ public class GameService {
         processCardMove(gameRoom, gameCard);
         gameRoom.increaseTurnCount();
         if (checkFieldCondition(gameRoom)) {
-            gameResultAsyncService.gameResult(gameRoomId); // 이벤트 형식으로 변경 필요
+            eventPublisher.publishEvent(new GameEndEvent(gameRoomId));
             return;
         }
 
@@ -94,7 +97,7 @@ public class GameService {
         }
 
         if (winnerId != null && checkGraveCard(gameRoom)) {
-            gameResultAsyncService.gameResult(gameRoomId); // 이벤트 형식으로 변경 필요
+            eventPublisher.publishEvent(new GameEndEvent(gameRoomId));
             return;
         }
 
@@ -125,7 +128,7 @@ public class GameService {
 
         Long winnerId = battle(card1, card2);
         if (checkGraveCard(gameRoom)) { // 무덤 카드 체크
-            gameResultAsyncService.gameResult(gameRoom.getId());
+            eventPublisher.publishEvent(new GameEndEvent(gameRoom.getId()));
             return;
         }
 
