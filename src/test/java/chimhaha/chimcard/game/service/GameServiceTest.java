@@ -3,6 +3,8 @@ package chimhaha.chimcard.game.service;
 import chimhaha.chimcard.common.MessageConstants;
 import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.game.dto.message.SubmitMessageDto;
+import chimhaha.chimcard.game.event.CardSubmitEvent;
+import chimhaha.chimcard.game.event.GameEventListener;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +16,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.ArrayList;
@@ -23,7 +26,10 @@ import java.util.Optional;
 import static chimhaha.chimcard.entity.CardLocation.FIELD;
 import static chimhaha.chimcard.entity.CardLocation.GRAVE;
 import static chimhaha.chimcard.entity.CardLocation.HAND;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
@@ -38,9 +44,12 @@ class GameServiceTest {
     @Mock GameRoomRepository gameRoomRepository;
     @Mock GameCardRepository gameCardRepository;
     @Mock SimpMessagingTemplate simpMessagingTemplate; //message send 추가로 인해 Mock 추가
+    @Mock ApplicationEventPublisher eventPublisher; // 이벤트 발행으로 변경
+    @Mock GameEventListener gameEventListener;
 
     @Captor ArgumentCaptor<String> destination;
     @Captor ArgumentCaptor<SubmitMessageDto> submitMessageCaptor;
+    @Captor ArgumentCaptor<CardSubmitEvent> cardSubmitEventCaptor;
 
     private Account player1;
     private Account player2;
@@ -170,39 +179,27 @@ class GameServiceTest {
                     assertEquals(FIELD, p2Card3.getLocation());
                 },
                 () -> {
-                    // 필드 상태와 battle()을 진행할 GameCard 데이터 전달
-                    verify(simpMessagingTemplate, times(2))
-                            .convertAndSend(destination.capture(), submitMessageCaptor.capture());
+                    verify(eventPublisher, times(1)).publishEvent(cardSubmitEventCaptor.capture());
                 }
         );
 
         /**
          * cardSubmit() 실행 후 message 확인
          */
+        CardSubmitEvent event = cardSubmitEventCaptor.getValue();
         List<String> destinations = destination.getAllValues();
         List<SubmitMessageDto> sentMessages = submitMessageCaptor.getAllValues();
 
         assertAll(
                 // player2의 턴이 끝나고 message가 전송됨. 카드를 제출한 현재 플레이어인 player2에게 먼저 메세지가 전달됨.
                 () -> {
-                    String p2Destination = destinations.getFirst();
-                    SubmitMessageDto p2Message = sentMessages.getFirst();
-                    assertEquals("/queue/game/" + player2.getId(), p2Destination);
-                    assertEquals(player1.getId(), p2Message.currentTurnPlayerId()); // cardSubmit 메서드 내에서 changeTurn() 이 실행되어 currentPlayer가 player1로 바뀜
-                    assertNotNull(p2Message.fieldCards());
-                    // battleCardDto 에는 GameRoom 기준으로 player1의 카드가 먼저 들어감. new BattleCardDto(player1Card, player2Card);
-                    assertEquals(p2Card1.getId(), p2Message.battleCardDto().gameCardId2());
-                    assertNotNull(p2Message.myHandCardIds()); // player2의 카드 제출이 있었기 때문에 player2만 핸드 데이터를 받음
-                },
-                // 다음 턴인 player1에게 메세지가 전달됨.
-                () -> {
-                    String p1Destination = destinations.getLast();
-                    SubmitMessageDto p1Message = sentMessages.getLast();
-                    assertEquals("/queue/game/" + player1.getId(), p1Destination);
-                    assertEquals(player1.getId(), p1Message.currentTurnPlayerId());
-                    assertNotNull(p1Message.fieldCards());
-                    assertEquals(p1Card3.getId(), p1Message.battleCardDto().gameCardId1());
-                    assertNull(p1Message.myHandCardIds());
+                    assertEquals(gameRoom.getId(), event.gameRoomId());
+                    assertEquals(player2.getId(), event.currentPlayerId());
+                    assertEquals(player1.getId(), event.nextPlayerId());
+
+                    assertNotNull(event.battleCardDto());
+                    assertEquals(p1Card3.getId(), event.battleCardDto().gameCardId1());
+                    assertEquals(p2Card1.getId(), event.battleCardDto().gameCardId2());
                 }
         );
     }
