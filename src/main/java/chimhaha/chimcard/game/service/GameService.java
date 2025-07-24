@@ -46,6 +46,10 @@ public class GameService {
         GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId)
                 .orElseThrow(() -> new ResourceNotFoundException(GAME_ROOM_NOT_FOUND));
 
+        if (gameRoom.isFinished()) {
+            throw new IllegalArgumentException("종료된 게임입니다.");
+        }
+
         Account player1 = gameRoom.getPlayer1();
         Account player2 = gameRoom.getPlayer2();
 
@@ -55,10 +59,17 @@ public class GameService {
 
         String otherPlayer = player1.getId().equals(playerId) ? player2.getNickname() : player1.getNickname();
 
+        // 내 손패 카드
         List<MyGameCardDto> myCards = gameCardRepository.findWithCardByGameRoomAndPlayerId(gameRoomId, playerId)
-                .stream().map(card -> new MyGameCardDto(card.getId(),card.getCard())).toList();
+                .stream().filter(gameCard -> gameCard.getLocation().equals(CardLocation.HAND))
+                .map(gameCard -> new MyGameCardDto(gameCard.getId(),gameCard.getCard())).toList();
 
-        return new GameInfoDto(otherPlayer, myCards, gameRoom.getCurrentTurnPlayerId(), player1.getId(), player2.getId());
+        // 전체 필드 카드
+        List<GameCard> fieldCards = getGameCardsInLocation(gameRoomId, CardLocation.FIELD);
+        Map<Integer, FieldCardDto> cardMap =
+                updateFieldCardMapForPlayer(fieldCards, playerId, gameRoom.getTurnCount(), null);
+
+        return new GameInfoDto(otherPlayer, myCards, gameRoom.getCurrentTurnPlayerId(), player1.getId(), player2.getId(), cardMap);
     }
 
     @Transactional
