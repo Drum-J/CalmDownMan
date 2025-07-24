@@ -7,7 +7,7 @@ import chimhaha.chimcard.entity.GameCard;
 import chimhaha.chimcard.entity.GameRoom;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.MatchingRequestDto;
-import chimhaha.chimcard.game.dto.MatchingSuccessResult;
+import chimhaha.chimcard.game.event.MatchingSuccessEvent;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
@@ -30,7 +30,6 @@ import static chimhaha.chimcard.common.MessageConstants.*;
 
 @Slf4j
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class GameMatchingService {
 
@@ -54,9 +53,9 @@ public class GameMatchingService {
 
             matchingMap.put(dto.playerId(), dto);
             matchingQueue.add(dto);
-            eventPublisher.publishEvent(new PlayerMatchingJoinEvent(this, dto));
         } finally {
             lock.unlock();
+            eventPublisher.publishEvent(new PlayerMatchingJoinEvent(this, dto));
         }
     }
 
@@ -74,7 +73,7 @@ public class GameMatchingService {
     }
 
     @Transactional
-    public Optional<MatchingSuccessResult> successMatching() {
+    public void successMatching() {
         MatchingRequestDto request1 = null;
         MatchingRequestDto request2 = null;
 
@@ -106,13 +105,12 @@ public class GameMatchingService {
                 makeGameCard(gameRoom, player2.getId(), request2.cardIds());
 
                 log.info("매칭 성공. gameId: {}, player1: {}, player2: {}", gameRoom.getId(), player1.getNickname(), player2.getNickname());
-                return Optional.of(new MatchingSuccessResult(gameRoom.getId(), player1.getId(), player2.getId()));
+                eventPublisher.publishEvent(new MatchingSuccessEvent(gameRoom.getId(), player1.getId(), player2.getId()));
             } catch (Exception e) {
                 log.error("매칭 성공 후 게임 생성 실패: {}", e.getMessage() , e);
                 // (선택) 실패한 경우 대기열 재진입 로직 추가
             }
         }
-        return Optional.empty();
     }
 
     private Account getAccount(Long accountId) {

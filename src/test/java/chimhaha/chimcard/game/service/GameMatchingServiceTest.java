@@ -3,7 +3,8 @@ package chimhaha.chimcard.game.service;
 import chimhaha.chimcard.card.repository.CardRepository;
 import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.game.dto.MatchingRequestDto;
-import chimhaha.chimcard.game.dto.MatchingSuccessResult;
+import chimhaha.chimcard.game.event.MatchingSuccessEvent;
+import chimhaha.chimcard.game.event.PlayerMatchingJoinEvent;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
@@ -11,9 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,13 +38,18 @@ public class GameMatchingServiceTest {
     @Mock GameCardRepository gameCardRepository;
     @Mock AccountRepository accountRepository;
     @Mock CardRepository cardRepository;
+    @Mock ApplicationEventPublisher eventPublisher;
+
+    // 이벤트 캡쳐
+    @Captor ArgumentCaptor<GameRoom> gameRoomCaptor;
+    @Captor ArgumentCaptor<MatchingSuccessEvent> matchingSuccessEventCaptor;
 
     @Test
     @DisplayName("매칭 성공")
     void matchSuccess() throws Exception {
         //given
-        Account player1 = createAccount("user1", "테스트유저1");
-        Account player2 = createAccount("user2", "테스트유저2");
+        Account player1 = createAccount(1L, "user1", "테스트유저1");
+        Account player2 = createAccount(2L, "user2", "테스트유저2");
 
         List<Long> cardIds1 = List.of(1L, 2L);
         List<Long> cardIds2 = List.of(3L, 4L);
@@ -59,16 +68,20 @@ public class GameMatchingServiceTest {
         gameMatchingService.joinMatching(dto2);
 
         //then
-        // 스케쥴러 직접 호출
-        gameMatchingService.successMatching().ifPresent(result -> {
-            log.info("Match Success! sendMatchSuccessMessage() 호출!");
-        });
+        // 이벤트 직접 호출
+        gameMatchingService.successMatching();
 
         // successMatching 에서 해당 메서드가 얼마나 호출 되었는지 확인
         verify(accountRepository, times(2)).findById(anyLong());
         verify(gameRoomRepository, times(1)).save(any(GameRoom.class));
         verify(cardRepository, times(2)).findAllById(anyList());
         verify(gameCardRepository, times(2)).saveAll(anyList());
+        // 매칭 성공 이벤트 발행 확인.
+        verify(eventPublisher, times(1)).publishEvent(matchingSuccessEventCaptor.capture());
+        MatchingSuccessEvent event = matchingSuccessEventCaptor.getValue();
+
+        assertEquals(player1.getId(), event.player1Id());
+        assertEquals(player2.getId(), event.player2Id());
     }
 
     @Test
@@ -104,15 +117,18 @@ public class GameMatchingServiceTest {
 
         //then
         // 매칭 취소 후 successMatching 호출
-        Optional<MatchingSuccessResult> result = gameMatchingService.successMatching();// 대기열 부족으로 아무일도 일어나지 않음.
+        gameMatchingService.successMatching();// 대기열 부족으로 아무일도 일어나지 않음.
 
         assertAll(
-                () -> assertTrue(result.isEmpty()),
                 () -> {
                     verify(accountRepository, never()).findById(anyLong());
                     verify(gameRoomRepository, never()).save(any(GameRoom.class));
                     verify(cardRepository, never()).findAllById(anyList());
                     verify(gameCardRepository, never()).saveAll(anyList());
+                    // 매칭 대기열 등록 이벤트는 발생하지만
+                    verify(eventPublisher, times(1)).publishEvent(any(PlayerMatchingJoinEvent.class));
+                    // 매칭 성공 이벤트는 발생하지 않는다.
+                    verify(eventPublisher, never()).publishEvent(any(MatchingSuccessEvent.class));
                 }
         );
     }
@@ -121,8 +137,8 @@ public class GameMatchingServiceTest {
     @DisplayName("동시성 문제 - 매칭 성공과 취소가 동시에 발생할 경우")
     void matchSuccessAndCancelConcurrency() throws Exception {
         //given
-        Account player1 = createAccount("user1", "테스트유저1");
-        Account player2 = createAccount("user2", "테스트유저2");
+        Account player1 = createAccount(1L, "user1", "테스트유저1");
+        Account player2 = createAccount(2L, "user2", "테스트유저2");
         MatchingRequestDto dto1 = new MatchingRequestDto(1L, new ArrayList<>(List.of(1L ,2L)));
         MatchingRequestDto dto2 = new MatchingRequestDto(2L, new ArrayList<>(List.of(3L, 4L)));
 
@@ -140,12 +156,6 @@ public class GameMatchingServiceTest {
         ExecutorService executorService = Executors.newFixedThreadPool(2);
         CountDownLatch latch = new CountDownLatch(1);
 
-        // 매칭 성공
-        Future<Optional<MatchingSuccessResult>> matchSuccessResult = executorService.submit(() -> {
-            latch.await();
-            return gameMatchingService.successMatching();
-        });
-
         // 1번 유저 매칭 취소
         executorService.submit(() -> {
             try {
@@ -156,20 +166,33 @@ public class GameMatchingServiceTest {
             }
         });
 
+        // 매칭 성공
+        executorService.submit(() -> {
+            try {
+                latch.await();
+                gameMatchingService.successMatching();
+            } catch (InterruptedException e) {
+                log.error(e.getMessage(), e);
+            }
+        });
+
         latch.countDown();
         executorService.shutdown();
         executorService.awaitTermination(5, TimeUnit.SECONDS);
 
         //then
-        Optional<MatchingSuccessResult> result = matchSuccessResult.get();
+        // 매칭 대기열 등록 이벤트는 2번 발생
+        verify(eventPublisher, times(2)).publishEvent(any(PlayerMatchingJoinEvent.class));
+        // gameRoomRepository.save()가 적어도 1번 실행 (매칭 취소: 0, 매칭 성공: 1)
+        verify(gameRoomRepository, atMost(1)).save(gameRoomCaptor.capture());
 
-        if (result.isEmpty()) { // 매칭 취소가 먼저 된 경우
+        if (gameRoomCaptor.getAllValues().isEmpty()) { // 매칭 취소가 먼저 된 경우
             log.info("매칭 취소가 먼저 진행됨.");
             assertAll(
                     () -> {
-                        verify(gameRoomRepository, never()).save(any(GameRoom.class));
                         verify(accountRepository, never()).findById(anyLong());
                         verify(cardRepository, never()).findAllById(anyList());
+                        verify(eventPublisher, never()).publishEvent(any(MatchingSuccessEvent.class));
                     }
             );
         } else { // 매칭 성사가 먼저 된 경우
@@ -177,16 +200,17 @@ public class GameMatchingServiceTest {
             assertAll(
                     () -> {
                         verify(accountRepository, times(2)).findById(anyLong());
-                        verify(gameRoomRepository, times(1)).save(any(GameRoom.class));
                         verify(cardRepository, times(2)).findAllById(anyList());
                         verify(gameCardRepository, times(2)).saveAll(anyList());
+                        verify(eventPublisher, times(1)).publishEvent(any(MatchingSuccessEvent.class));
                     }
             );
         }
     }
 
-    private Account createAccount(String username, String nickname) {
+    private Account createAccount(Long id, String username, String nickname) {
         return Account.builder()
+                .id(id)
                 .username(username)
                 .password("1234")
                 .nickname(nickname)

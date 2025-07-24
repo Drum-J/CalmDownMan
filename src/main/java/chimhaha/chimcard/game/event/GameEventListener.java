@@ -21,10 +21,13 @@ public class GameEventListener {
 
     @EventListener(PlayerMatchingJoinEvent.class)
     public void matchingSchedule(PlayerMatchingJoinEvent event) {
-        gameMatchingService.successMatching().ifPresent(result -> {
-            sendMatchSuccessMessage(result.gameRoomId(), result.player1Id());
-            sendMatchSuccessMessage(result.gameRoomId(), result.player2Id());
-        });
+        gameMatchingService.successMatching();
+    }
+
+    @TransactionalEventListener
+    public void sendMatchingSuccessMessage(MatchingSuccessEvent event) {
+        sendMatchSuccessMessage(event.gameRoomId(), event.player1Id());
+        sendMatchSuccessMessage(event.gameRoomId(), event.player2Id());
     }
 
     @Async
@@ -34,6 +37,7 @@ public class GameEventListener {
     }
 
     private void sendMatchSuccessMessage(Long gameRoomId, Long playerId) {
+        log.info("매칭 완료 메세지 전송!! gameRoomId: {}, playerId: {}", gameRoomId, playerId);
         messagingTemplate.convertAndSend("/queue/game/matching/success/" + playerId, gameRoomId);
     }
 }
