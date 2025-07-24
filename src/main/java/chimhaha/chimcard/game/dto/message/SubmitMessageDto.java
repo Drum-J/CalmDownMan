@@ -10,5 +10,5 @@ import java.util.Map;
 public record SubmitMessageDto(Long currentTurnPlayerId,
                                Map<Integer, FieldCardDto> fieldCards,
                                BattleCardDto battleCardDto,
-                               List<MyGameCardDto> myHandCardIds) {
+                               List<MyGameCardDto> myHandCards) {
 }

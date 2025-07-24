@@ -7,7 +7,7 @@ import chimhaha.chimcard.entity.GameRoom;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.*;
 import chimhaha.chimcard.game.dto.message.BattleMessageDto;
-import chimhaha.chimcard.game.dto.message.SubmitMessageDto;
+import chimhaha.chimcard.game.event.CardSubmitEvent;
 import chimhaha.chimcard.game.event.GameEndEvent;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
@@ -85,7 +85,7 @@ public class GameService {
         }
 
         gameRoom.changeTurn();
-        createSubmitMessage(gameRoom, playerId);
+        createSubmitEvent(gameRoom, playerId);
     }
 
     /**
@@ -123,9 +123,10 @@ public class GameService {
         Map<Integer, FieldCardDto> cardMap2 =
                 updateFieldCardMapForPlayer(fieldCardsResult, nextPlayerId, gameRoom.getTurnCount(), null);
 
-        sendSubmitOrBattleMessage(currentPlayerId,
+        // TODO : 배틀 완료 메세지도 이벤트로 처리 필요
+        sendSubmitOrBattleMessage(gameRoomId, currentPlayerId,
                 new BattleMessageDto(nextPlayerId, cardMap1, winnerId));
-        sendSubmitOrBattleMessage(nextPlayerId,
+        sendSubmitOrBattleMessage(gameRoomId, nextPlayerId,
                 new BattleMessageDto(nextPlayerId, cardMap2, winnerId));
     }
 
@@ -150,10 +151,11 @@ public class GameService {
         Map<Integer, FieldCardDto> cardMap2 =
                 updateFieldCardMapForPlayer(fieldCards, card2.getPlayerId(), gameRoom.getTurnCount(), null);
 
-        // 배틀 결과 메세지 전송 (수신자, DTO[현재 턴, 필드 카드, winnerId])
-        sendSubmitOrBattleMessage(card1.getPlayerId(),
+        // TODO : 배틀 완료 메세지도 이벤트로 처리 필요
+        // 배틀 결과 메세지 전송 (게임룸 ID, 수신자, DTO[현재 턴, 필드 카드, winnerId])
+        sendSubmitOrBattleMessage(gameRoom.getId(), card1.getPlayerId(),
                 new BattleMessageDto(gameRoom.getCurrentTurnPlayerId(), cardMap1, winnerId ));
-        sendSubmitOrBattleMessage(card2.getPlayerId(),
+        sendSubmitOrBattleMessage(gameRoom.getId(), card2.getPlayerId(),
                 new BattleMessageDto(gameRoom.getCurrentTurnPlayerId(), cardMap2, winnerId));
     }
 
@@ -164,11 +166,13 @@ public class GameService {
         Long playerId = gameCard.getPlayerId();
         Long player1Id = gameRoom.getPlayer1().getId();
 
-        // 필드에 있는 모든 카드 가져오기
-        List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
+        // 해당 플레이어의 필드 카드만 가져오기
+        List<GameCard> playersCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD)
+                .stream().filter(gc -> gc.getPlayerId().equals(playerId)).toList();
+
         // 기존 필드 카드 전진 player1은 [1] -> [6] / player2는 [1] <- [6] 로 움직임
-        for (GameCard fieldCard : fieldCards) {
-            if (player1Id.equals(playerId)) { // Player1의 카드
+        for (GameCard fieldCard : playersCards) {
+            if (playerId.equals(player1Id)) { // Player1의 카드
                 fieldCard.moveRight();
             } else { // Player2의 카드
                 fieldCard.moveLeft();
@@ -183,7 +187,7 @@ public class GameService {
     /**
      * 각 플레이어에게 보낼 매세지 생성
      */
-    private void createSubmitMessage(GameRoom gameRoom, Long currentPlayerId) {
+    private void createSubmitEvent(GameRoom gameRoom, Long currentPlayerId) {
         List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
         BattleCardDto battleCardDto = checkForBattle(fieldCards, gameRoom.getPlayer1().getId());
 
@@ -194,12 +198,10 @@ public class GameService {
         // 현재 플레이어의 핸드 조회
         List<MyGameCardDto> myHandCards = getCurrentHandCards(gameRoom, currentPlayerId);
 
-        // 현재 플레이어에게 메세지 전송 (수신자, DTO[다음 턴, 필드 카드, battle 진행할 카드, 내 핸드])
-        sendSubmitOrBattleMessage(currentPlayerId,
-                new SubmitMessageDto(nextPlayerId, cardMap1, battleCardDto, myHandCards));
-        // 다음 플레이어에게 메세지 전송 (수신자, DTO[다음 턴, 필드 카드, battle 진행할 카드, 내 핸드(null)])
-        sendSubmitOrBattleMessage(nextPlayerId,
-                new SubmitMessageDto(nextPlayerId, cardMap2, battleCardDto, null));
+        eventPublisher.publishEvent(
+                new CardSubmitEvent(gameRoom.getId(), currentPlayerId, nextPlayerId,
+                        cardMap1, cardMap2, battleCardDto, myHandCards)
+        );
     }
 
     /**
@@ -242,8 +244,9 @@ public class GameService {
     /**
      * 카드 제출 or 배틀 결과 메세지 전송
      */
-    private <T> void sendSubmitOrBattleMessage(Long playerId, T data) {
-        messagingTemplate.convertAndSend("/queue/game/" + playerId, data);
+    private <T> void sendSubmitOrBattleMessage(Long gameRoomId, Long playerId, T data) {
+        String destination = String.format("/queue/game/%s/%s", gameRoomId, playerId);
+        messagingTemplate.convertAndSend(destination, data);
     }
 
     /**
