@@ -58,6 +58,7 @@ public class WebSecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", cors);
+        source.registerCorsConfiguration("/ws-connection/**", cors);
         return source;
     }
 

@@ -25,7 +25,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // 클라이언트가 WebSocket 연결을 시작할 엔드포인트를 설정합니다.
         registry
                 .addEndpoint("/ws-connection")
-                .setAllowedOrigins("*") //cors
-                ;
+                .setAllowedOrigins("http://localhost:5173") //cors
+                .withSockJS();
     }
 }
