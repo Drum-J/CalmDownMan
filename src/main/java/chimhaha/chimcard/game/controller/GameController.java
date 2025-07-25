@@ -1,10 +1,7 @@
 package chimhaha.chimcard.game.controller;
 
 import chimhaha.chimcard.common.ApiResponse;
-import chimhaha.chimcard.game.dto.BattleCardDto;
-import chimhaha.chimcard.game.dto.CardSubmitRequestDto;
-import chimhaha.chimcard.game.dto.FieldBattleRequestDto;
-import chimhaha.chimcard.game.dto.GameInfoDto;
+import chimhaha.chimcard.game.dto.*;
 import chimhaha.chimcard.game.service.GameService;
 import chimhaha.chimcard.utils.AccountUtils;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +39,13 @@ public class GameController {
     }
 
     @PostMapping("/{gameRoomId}/fieldBattle")
-    public void fieldBattle(@PathVariable("gameRoomId") Long gameRoomId, FieldBattleRequestDto dto) {
+    public void fieldBattle(@PathVariable("gameRoomId") Long gameRoomId,@RequestBody FieldBattleRequestDto dto) {
         gameService.fieldBattle(gameRoomId, dto.playerId());
     }
+
+    @PostMapping("/{gameRoomId}/surrender")
+    public void surrender(@PathVariable("gameRoomId") Long gameRoomId,@RequestBody SurrenderDto dto) {
+        gameService.surrender(gameRoomId, dto.playerId());
+    }
+
 }

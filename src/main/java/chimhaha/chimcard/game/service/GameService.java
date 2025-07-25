@@ -6,7 +6,7 @@ import chimhaha.chimcard.entity.GameCard;
 import chimhaha.chimcard.entity.GameRoom;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.*;
-import chimhaha.chimcard.game.dto.message.BattleMessageDto;
+import chimhaha.chimcard.game.event.SurrenderEvent;
 import chimhaha.chimcard.game.event.BattleEvent;
 import chimhaha.chimcard.game.event.CardSubmitEvent;
 import chimhaha.chimcard.game.event.GameEndEvent;
@@ -162,6 +162,27 @@ public class GameService {
                         gameRoom.getWinnerId()
                 )
         );
+    }
+
+    @Transactional
+    public void surrender(Long gameRoomId, Long PlayerId) {
+        log.info("surrender playerId: {}", PlayerId);
+        GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId)
+                .orElseThrow(() -> new ResourceNotFoundException(GAME_ROOM_NOT_FOUND));
+
+        Long player1Id = gameRoom.getPlayer1().getId();
+        Long player2Id = gameRoom.getPlayer2().getId();
+
+        if (player1Id.equals(PlayerId)) {
+            gameRoom.gameWinner(player2Id);
+        } else if (player2Id.equals(PlayerId)) {
+            gameRoom.gameWinner(player1Id);
+        } else {
+            throw new IllegalArgumentException("해당 게임의 플레이어가 아닙니다.");
+        }
+
+        eventPublisher.publishEvent(new SurrenderEvent(gameRoomId, player1Id, player2Id, gameRoom.getWinnerId()));
+        eventPublisher.publishEvent(new GameEndEvent(gameRoomId));
     }
 
     /**
