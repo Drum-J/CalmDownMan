@@ -10,8 +10,10 @@ import java.util.Map;
 
 public record CardSubmitEvent(
         Long gameRoomId, Long currentPlayerId, Long nextPlayerId,
-        Map<Integer, FieldCardDto> player1FieldCards,
-        Map<Integer, FieldCardDto> player2FieldCards,
+        Map<Integer, FieldCardDto> currentPlayerFieldCards,
+        Map<Integer, FieldCardDto> nextPlayerFieldCards,
         BattleCardDto battleCardDto,
-        List<MyGameCardDto> myHandCards) {
+        List<MyGameCardDto> myHandCards,
+        Long gameWinnerId
+) {
 }

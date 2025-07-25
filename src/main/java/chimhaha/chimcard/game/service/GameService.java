@@ -7,6 +7,7 @@ import chimhaha.chimcard.entity.GameRoom;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.*;
 import chimhaha.chimcard.game.dto.message.BattleMessageDto;
+import chimhaha.chimcard.game.event.BattleEvent;
 import chimhaha.chimcard.game.event.CardSubmitEvent;
 import chimhaha.chimcard.game.event.GameEndEvent;
 import chimhaha.chimcard.game.repository.GameCardRepository;
@@ -36,7 +37,6 @@ public class GameService {
     private final GameRoomRepository gameRoomRepository;
     private final GameCardRepository gameCardRepository;
     private final SimpMessagingTemplate messagingTemplate;
-    private final GameResultAsyncService gameResultAsyncService;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -81,11 +81,44 @@ public class GameService {
         gameRoom.increaseTurnCount();
         if (checkFieldCondition(gameRoom)) {
             eventPublisher.publishEvent(new GameEndEvent(gameRoomId));
-            return;
         }
 
         gameRoom.changeTurn();
         createSubmitEvent(gameRoom, playerId);
+    }
+
+    @Transactional
+    public void battleStart(Long gameRoomId, BattleCardDto dto) {
+        GameCard card1 = gameCardRepository.findWithCardAndRoomById(dto.gameCardId1())
+                .orElseThrow(() -> new ResourceNotFoundException(GAME_CARD_NOT_FOUND));
+        GameCard card2 = gameCardRepository.findWithCardAndRoomById(dto.gameCardId2())
+                .orElseThrow(() -> new ResourceNotFoundException(GAME_CARD_NOT_FOUND));
+        GameRoom gameRoom = card1.getGameRoom();
+
+        if (!gameRoom.getId().equals(gameRoomId)) {
+            throw new IllegalArgumentException(GAME_ROOM_NOT_FOUND);
+        }
+
+        Long winnerId = battle(card1, card2);
+
+        // 현재 필드 상태 업데이트
+        List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
+        Map<Integer, FieldCardDto> cardMap1 =
+                updateFieldCardMapForPlayer(fieldCards, card1.getPlayerId(), gameRoom.getTurnCount(), null);
+        Map<Integer, FieldCardDto> cardMap2 =
+                updateFieldCardMapForPlayer(fieldCards, card2.getPlayerId(), gameRoom.getTurnCount(), null);
+
+        if (checkGraveCard(gameRoom)) { // 무덤 카드 체크
+            eventPublisher.publishEvent(new GameEndEvent(gameRoom.getId()));
+        }
+
+        eventPublisher.publishEvent(
+                new BattleEvent(
+                        gameRoomId, card1.getPlayerId(), card2.getPlayerId(), gameRoom.getCurrentTurnPlayerId(),
+                        winnerId , cardMap1, cardMap2 ,null ,null,
+                        gameRoom.getWinnerId()
+                )
+        );
     }
 
     /**
@@ -97,66 +130,38 @@ public class GameService {
         GameRoom gameRoom = getGameRoomAndValidateTurn(gameRoomId, currentPlayerId);
         gameRoom.increaseTurnCount();
         Long player1Id = gameRoom.getPlayer1().getId();
+        Long player2Id = gameRoom.getPlayer2().getId();
 
         List<GameCard> fieldCards = gameCardRepository.findWithCardByGameRoomAndLocation(gameRoom.getId(), CardLocation.FIELD);
         GameCard player1Card = getPlayer1Card(fieldCards, player1Id);
         GameCard player2Card = getPlayer2Card(fieldCards, player1Id);
 
-        Long winnerId = null;
-        if (player1Card != null && player2Card != null) {
-            winnerId = battle(player1Card, player2Card);
+        if (player1Card == null || player2Card == null) {
+            throw new IllegalArgumentException("필드 배틀을 진행할 수 없습니다.");
         }
 
-        if (winnerId != null && checkGraveCard(gameRoom)) {
-            eventPublisher.publishEvent(new GameEndEvent(gameRoomId));
-            return;
-        }
+        Long winnerId = battle(player1Card, player2Card);
 
         gameRoom.changeTurn();
-        Long nextPlayerId = gameRoom.getCurrentTurnPlayerId();
-
         // 현재 필드 상태 업데이트 조회된 fieldCards를 stream.filter 로 데이터 판별
         List<GameCard> fieldCardsResult = fieldCards.stream()
                 .filter(gameCard -> gameCard.getLocation().equals(CardLocation.FIELD)).toList();
         Map<Integer, FieldCardDto> cardMap1 =
-                updateFieldCardMapForPlayer(fieldCardsResult, currentPlayerId, gameRoom.getTurnCount(), null);
+                updateFieldCardMapForPlayer(fieldCardsResult, player1Id, gameRoom.getTurnCount(), null);
         Map<Integer, FieldCardDto> cardMap2 =
-                updateFieldCardMapForPlayer(fieldCardsResult, nextPlayerId, gameRoom.getTurnCount(), null);
+                updateFieldCardMapForPlayer(fieldCardsResult, player2Id, gameRoom.getTurnCount(), null);
 
-        // TODO : 배틀 완료 메세지도 이벤트로 처리 필요
-        sendSubmitOrBattleMessage(gameRoomId, currentPlayerId,
-                new BattleMessageDto(nextPlayerId, cardMap1, winnerId));
-        sendSubmitOrBattleMessage(gameRoomId, nextPlayerId,
-                new BattleMessageDto(nextPlayerId, cardMap2, winnerId));
-    }
-
-    @Transactional
-    public void battleStart(BattleCardDto dto) {
-        GameCard card1 = gameCardRepository.findWithCardAndRoomById(dto.gameCardId1())
-                .orElseThrow(() -> new ResourceNotFoundException(GAME_CARD_NOT_FOUND));
-        GameCard card2 = gameCardRepository.findWithCardAndRoomById(dto.gameCardId2())
-                .orElseThrow(() -> new ResourceNotFoundException(GAME_CARD_NOT_FOUND));
-        GameRoom gameRoom = card1.getGameRoom();
-
-        Long winnerId = battle(card1, card2);
-        if (checkGraveCard(gameRoom)) { // 무덤 카드 체크
-            eventPublisher.publishEvent(new GameEndEvent(gameRoom.getId()));
-            return;
+        if (checkGraveCard(gameRoom)) {
+            eventPublisher.publishEvent(new GameEndEvent(gameRoomId));
         }
 
-        // 현재 필드 상태 업데이트
-        List<GameCard> fieldCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD);
-        Map<Integer, FieldCardDto> cardMap1 =
-                updateFieldCardMapForPlayer(fieldCards, card1.getPlayerId(), gameRoom.getTurnCount(), null);
-        Map<Integer, FieldCardDto> cardMap2 =
-                updateFieldCardMapForPlayer(fieldCards, card2.getPlayerId(), gameRoom.getTurnCount(), null);
-
-        // TODO : 배틀 완료 메세지도 이벤트로 처리 필요
-        // 배틀 결과 메세지 전송 (게임룸 ID, 수신자, DTO[현재 턴, 필드 카드, winnerId])
-        sendSubmitOrBattleMessage(gameRoom.getId(), card1.getPlayerId(),
-                new BattleMessageDto(gameRoom.getCurrentTurnPlayerId(), cardMap1, winnerId ));
-        sendSubmitOrBattleMessage(gameRoom.getId(), card2.getPlayerId(),
-                new BattleMessageDto(gameRoom.getCurrentTurnPlayerId(), cardMap2, winnerId));
+        eventPublisher.publishEvent(
+                new BattleEvent(
+                        gameRoomId, player1Id, player2Id, gameRoom.getCurrentTurnPlayerId(),
+                        winnerId , cardMap1, cardMap2, player1Card.getCard().getImageUrl(), player2Card.getCard().getImageUrl(),
+                        gameRoom.getWinnerId()
+                )
+        );
     }
 
     /**
@@ -200,7 +205,7 @@ public class GameService {
 
         eventPublisher.publishEvent(
                 new CardSubmitEvent(gameRoom.getId(), currentPlayerId, nextPlayerId,
-                        cardMap1, cardMap2, battleCardDto, myHandCards)
+                        cardMap1, cardMap2, battleCardDto, myHandCards, gameRoom.getWinnerId())
         );
     }
 
@@ -258,6 +263,8 @@ public class GameService {
             GameCard player2Card = getPlayer2Card(fieldCards, player1Id);
 
             if (player1Card != null && player2Card != null) {
+                player1Card.turnFront();
+                player2Card.turnFront();
                 return new BattleCardDto(player1Card, player2Card);
             }
         }
@@ -308,11 +315,9 @@ public class GameService {
 
             if (fieldCardMap.get(player1Id) == 6L) {
                 gameRoom.gameWinner(player1Id);
-                sendMessage(gameRoom.getId(), new GameResultDto(player1Id));
                 return true;
             } else if (fieldCardMap.get(player2Id) == 6L) {
                 gameRoom.gameWinner(player2Id);
-                sendMessage(gameRoom.getId(), new GameResultDto(player2Id));
                 return true;
             }
         }
@@ -341,8 +346,7 @@ public class GameService {
         }
 
         if (loserIds.size() == 2) { // 무승부, 마지막으로 승부한 카드가 최종 무승부로 동시에 무덤으로 이동할 경우
-            gameRoom.finishGame(); // 무승부는 게임 상태만 변경 winnerId 는 null로 둔다.
-            sendMessage(gameRoom.getId(), GameResultDto.drawGame());
+            gameRoom.gameWinner(0L); // 무승부는 게임 상태만 변경 winnerId 는 0으로 둔다.
             return true;
         } else if (loserIds.size() == 1) { // 승패 결정
             Long loserId = loserIds.getFirst();
@@ -351,15 +355,10 @@ public class GameService {
                     : gameRoom.getPlayer1().getId();
 
             gameRoom.gameWinner(winnerId);
-            sendMessage(gameRoom.getId(), new GameResultDto(winnerId));
             return true;
         }
 
         return false;
-    }
-
-    private <T> void sendMessage(Long gameRoomId, T message) {
-        messagingTemplate.convertAndSend("/topic/game" + gameRoomId, message);
     }
 
     private GameRoom getGameRoomAndValidateTurn(Long gameRoomId, Long playerId) {

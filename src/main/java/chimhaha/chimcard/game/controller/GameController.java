@@ -1,7 +1,9 @@
 package chimhaha.chimcard.game.controller;
 
 import chimhaha.chimcard.common.ApiResponse;
+import chimhaha.chimcard.game.dto.BattleCardDto;
 import chimhaha.chimcard.game.dto.CardSubmitRequestDto;
+import chimhaha.chimcard.game.dto.FieldBattleRequestDto;
 import chimhaha.chimcard.game.dto.GameInfoDto;
 import chimhaha.chimcard.game.service.GameService;
 import chimhaha.chimcard.utils.AccountUtils;
@@ -32,5 +34,15 @@ public class GameController {
         gameService.cardSubmit(gameRoomId, dto.playerId(), dto.gameCardId());
 
         return ApiResponse.success("Submit Success");
+    }
+
+    @PostMapping("/{gameRoomId}/battle")
+    public void battleStart(@PathVariable("gameRoomId") Long gameRoomId, @RequestBody BattleCardDto dto) {
+        gameService.battleStart(gameRoomId, dto);
+    }
+
+    @PostMapping("/{gameRoomId}/fieldBattle")
+    public void fieldBattle(@PathVariable("gameRoomId") Long gameRoomId, FieldBattleRequestDto dto) {
+        gameService.fieldBattle(gameRoomId, dto.playerId());
     }
 }

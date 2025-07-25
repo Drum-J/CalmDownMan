@@ -1,5 +1,6 @@
 package chimhaha.chimcard.game.event;
 
+import chimhaha.chimcard.game.dto.message.BattleMessageDto;
 import chimhaha.chimcard.game.dto.message.SubmitMessageDto;
 import chimhaha.chimcard.game.service.GameMatchingService;
 import chimhaha.chimcard.game.service.GameResultAsyncService;
@@ -40,11 +41,16 @@ public class GameEventListener {
     @TransactionalEventListener
     public void sendCardSubmittedMessage(CardSubmitEvent event) {
         // 현재 플레이어에게 메세지 전송 (게임룸 ID, 수신자, DTO[다음 턴, 필드 카드, battle 진행할 카드, 내 핸드])
-        sendSubmitOrBattleMessage(event.gameRoomId(), event.currentPlayerId(),
-                new SubmitMessageDto(event.nextPlayerId(), event.player1FieldCards(), event.battleCardDto(), event.myHandCards()));
+        sendSubmitOrBattleMessage(event.gameRoomId(), event.currentPlayerId(), new SubmitMessageDto(event));
         // 다음 플레이어에게 메세지 전송 (게임룸 ID, 수신자, DTO[다음 턴, 필드 카드, battle 진행할 카드, 내 핸드(null)])
-        sendSubmitOrBattleMessage(event.gameRoomId(), event.nextPlayerId(),
-                new SubmitMessageDto(event.nextPlayerId(), event.player2FieldCards(), event.battleCardDto(), null));
+        sendSubmitOrBattleMessage(event.gameRoomId(), event.nextPlayerId(), new SubmitMessageDto(event, null));
+    }
+
+    @TransactionalEventListener
+    public void sendBattleResultMessage(BattleEvent event) {
+        // 배틀 결과 메세지 전송 (게임룸 ID, 수신자, DTO[현재 턴, 필드 카드, winnerId])
+        sendSubmitOrBattleMessage(event.gameRoomId(), event.player1Id(), new BattleMessageDto(event));
+        sendSubmitOrBattleMessage(event.gameRoomId(), event.player2Id(), new BattleMessageDto(event));
     }
 
     private void sendMatchSuccessMessage(Long gameRoomId, Long playerId) {
