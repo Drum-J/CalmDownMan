@@ -15,11 +15,11 @@ public record SubmitMessageDto(Long currentTurnPlayerId,
                                Long gameWinnerId) {
     // 현재 플레이어 전송
     public SubmitMessageDto(CardSubmitEvent event) {
-        this(event.currentPlayerId(), event.currentPlayerFieldCards(), event.battleCardDto(), event.myHandCards(), event.gameWinnerId());
+        this(event.nextPlayerId(), event.currentPlayerFieldCards(), event.battleCardDto(), event.myHandCards(), event.gameWinnerId());
     }
 
     // 다음 플레이어 전송
     public SubmitMessageDto(CardSubmitEvent event, List<MyGameCardDto> myHandCards) {
-        this(event.currentPlayerId(), event.nextPlayerFieldCards(), event.battleCardDto(), myHandCards, event.gameWinnerId());
+        this(event.nextPlayerId(), event.nextPlayerFieldCards(), event.battleCardDto(), myHandCards, event.gameWinnerId());
     }
 }
