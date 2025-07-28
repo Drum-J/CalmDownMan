@@ -1,6 +1,5 @@
 package chimhaha.chimcard.user.dto;
 
-import chimhaha.chimcard.valid.UniqueNickname;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -18,7 +17,6 @@ public class SignUpDto {
 
     @NotBlank(message = "nickname")
     @Size(min = 2, message = "nickname")
-    @UniqueNickname
     private String nickname;
 
     @NotBlank(message = "password")

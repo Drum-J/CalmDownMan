@@ -13,6 +13,7 @@ public class MessageConstants {
     public static final String ID_OR_PASSWORD_WRONG = "아이디나 비밀번호가 틀렸습니다.";
     public static final String LOGIN_INFO_NOT_FOUND = "로그인 정보를 찾을 수 없습니다.";
     public static final String EXIST_USERNAME = "해당 ID가 이미 존재합니다.";
+    public static final String EXIST_NICKNAME = "사용 중인 닉네임입니다.";
     public static final String NOT_TRADE_OWNER = "[교환글/교환신청]의 [작성자/신청자]가 아닙니다.";
     public static final String IS_NOT_WAITING = "대기 중 상태가 아닙니다.";
     public static final String NOT_MY_GAME = "내가 참여한 게임이 아닙니다.";

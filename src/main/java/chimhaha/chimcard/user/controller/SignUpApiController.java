@@ -43,4 +43,11 @@ public class SignUpApiController {
 
         return ApiResponse.success("사용 가능한 ID 입니다!");
     }
+
+    @GetMapping("/checkNickname")
+    public ApiResponse<String> checkNickname(@RequestParam("nickname") String nickname) {
+        signUpService.checkNickname(nickname);
+
+        return ApiResponse.success("사용 가능한 닉네임 입니다!");
+    }
 }

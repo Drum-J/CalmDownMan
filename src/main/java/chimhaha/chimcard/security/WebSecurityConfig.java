@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
@@ -43,7 +44,7 @@ public class WebSecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/ws-connection/**", "/api/login", "/api/token/**").permitAll()
+                        .requestMatchers("/ws-connection/**", "/api/login", "/api/token/**", "/api/signup/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
@@ -73,7 +74,7 @@ public class WebSecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        return new BCryptPasswordEncoder();
     }
 
     // 프로메테우스 모니터링용 사용자 생성
@@ -81,7 +82,7 @@ public class WebSecurityConfig {
     public UserDetailsService userDetailsService() {
         UserDetails monitorUser = User
                 .withUsername(monitoringUser.getUsername())
-                .password(monitoringUser.getPassword())
+                .password(passwordEncoder().encode(monitoringUser.getPassword()))
                 .roles(monitoringUser.getRole())
                 .build();
 

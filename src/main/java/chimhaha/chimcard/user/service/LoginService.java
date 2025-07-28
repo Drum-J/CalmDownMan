@@ -7,6 +7,7 @@ import chimhaha.chimcard.user.dto.LoginRequestDto;
 import chimhaha.chimcard.user.dto.TokenResponseDto;
 import chimhaha.chimcard.user.repository.AccountRepository;
 import io.jsonwebtoken.Claims;
+import io.micrometer.core.annotation.Counted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,7 @@ public class LoginService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
 
+    @Counted("user.login")
     public TokenResponseDto login(LoginRequestDto dto) {
         Account account = accountRepository.findByUsername(dto.username())
                 .orElseThrow(() -> new ResourceNotFoundException(ID_OR_PASSWORD_WRONG));
@@ -39,6 +41,7 @@ public class LoginService {
         return token;
     }
 
+    @Counted("user.login")
     public void logout(String refreshToken) {
         Claims claims = jwtProvider.validateToken(refreshToken);
         Long accountId = claims.get("id", Long.class);
@@ -47,6 +50,7 @@ public class LoginService {
         account.updateToken(null);
     }
 
+    @Counted("user.login")
     public TokenResponseDto refreshToken(String refreshToken) {
         Claims claims = jwtProvider.validateToken(refreshToken);
         Long accountId = claims.get("id", Long.class);
