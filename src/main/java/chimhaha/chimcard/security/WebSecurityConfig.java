@@ -35,6 +35,7 @@ public class WebSecurityConfig {
     private final MonitoringUser monitoringUser;
 
     @Bean
+    @Order(2)
     SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -72,6 +73,18 @@ public class WebSecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    // 프로메테우스 모니터링용 사용자 생성
+    @Bean
+    public UserDetailsService userDetailsService() {
+        UserDetails monitorUser = User
+                .withUsername(monitoringUser.getUsername())
+                .password(monitoringUser.getPassword())
+                .roles(monitoringUser.getRole())
+                .build();
+
+        return new InMemoryUserDetailsManager(monitorUser);
     }
 }
