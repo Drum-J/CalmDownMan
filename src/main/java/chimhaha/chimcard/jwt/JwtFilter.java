@@ -23,8 +23,10 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
-        Claims claims = jwtProvider.validateToken(token);
-        jwtProvider.setAuthentication(claims);
+        if (token != null) {
+            Claims claims = jwtProvider.validateToken(token);
+            jwtProvider.setAuthentication(claims);
+        }
 
         filterChain.doFilter(request, response);
     }
@@ -36,14 +38,5 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         return null;
-    }
-
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        return request.getServletPath().startsWith("/api/login") ||
-                request.getServletPath().startsWith("/api/token") ||
-                request.getServletPath().startsWith("/api/signup") ||
-                request.getServletPath().startsWith("/ws-connection")
-                ;
     }
 }

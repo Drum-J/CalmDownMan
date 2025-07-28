@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -24,8 +25,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(BAD_REQUEST).body(ApiResponse.badRequest(e.getMessage()));
     }
 
-    @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<ApiResponse<String>> invalidToken(InvalidTokenException e) {
+    //JwtAuthenticationEntryPoint 에서 발생하는 AuthenticationException 처리도 함께 하도록 변경
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<String>> invalidToken(AuthenticationException e) {
         return ResponseEntity.status(UNAUTHORIZED).body(ApiResponse.unAuthorized(e.getMessage()));
     }
 
