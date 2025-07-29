@@ -50,8 +50,8 @@ public class GameEventListener {
     @TransactionalEventListener
     public void sendBattleResultMessage(BattleEvent event) {
         // 배틀 결과 메세지 전송 (게임룸 ID, 수신자, DTO[현재 턴, 필드 카드, winnerId])
-        sendSubmitOrBattleMessage(event.gameRoomId(), event.player1Id(), new BattleMessageDto(event));
-        sendSubmitOrBattleMessage(event.gameRoomId(), event.player2Id(), new BattleMessageDto(event));
+        sendSubmitOrBattleMessage(event.gameRoomId(), event.player1Id(), new BattleMessageDto(event, event.player1FieldCards()));
+        sendSubmitOrBattleMessage(event.gameRoomId(), event.player2Id(), new BattleMessageDto(event, event.player2FieldCards()));
     }
 
     @TransactionalEventListener

@@ -12,7 +12,7 @@ public record BattleMessageDto(Long currentTurnPlayerId,
                                String card2Image,
                                Long gameWinnerId
 ) {
-    public BattleMessageDto(BattleEvent event) {
-        this(event.currentTurnPlayerId(), event.player1FieldCards(), event.winnerId(), event.card1Image(), event.card2Image(), event.gameWinnerId());
+    public BattleMessageDto(BattleEvent event, Map<Integer, FieldCardDto> fieldCards) {
+        this(event.currentTurnPlayerId(), fieldCards, event.winnerId(), event.card1Image(), event.card2Image(), event.gameWinnerId());
     }
 }

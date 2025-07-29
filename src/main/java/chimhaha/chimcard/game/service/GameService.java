@@ -12,6 +12,7 @@ import chimhaha.chimcard.game.event.CardSubmitEvent;
 import chimhaha.chimcard.game.event.GameEndEvent;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
+import io.micrometer.core.annotation.Counted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -72,6 +73,7 @@ public class GameService {
         return new GameInfoDto(otherPlayer, myCards, gameRoom.getCurrentTurnPlayerId(), player1.getId(), player2.getId(), cardMap);
     }
 
+    @Counted("game.playing")
     @Transactional
     public void cardSubmit(Long gameRoomId, Long playerId, Long gameCardId) {
         GameRoom gameRoom = getGameRoomAndValidateTurn(gameRoomId, playerId);
@@ -87,6 +89,7 @@ public class GameService {
         createSubmitEvent(gameRoom, playerId);
     }
 
+    @Counted("game.playing")
     @Transactional
     public void battleStart(Long gameRoomId, BattleCardDto dto) {
         GameCard card1 = gameCardRepository.findWithCardAndRoomById(dto.gameCardId1())
@@ -125,6 +128,7 @@ public class GameService {
      * 필드 카드로 직접 배틀 실행
      * 카드의 fieldPosition과 상관없이 가장 앞에 있는 카드로 승부
      */
+    @Counted("game.playing")
     @Transactional
     public void fieldBattle(Long gameRoomId, Long currentPlayerId) {
         GameRoom gameRoom = getGameRoomAndValidateTurn(gameRoomId, currentPlayerId);
@@ -135,10 +139,11 @@ public class GameService {
         List<GameCard> fieldCards = gameCardRepository.findWithCardByGameRoomAndLocation(gameRoom.getId(), CardLocation.FIELD);
         GameCard player1Card = getPlayer1Card(fieldCards, player1Id);
         GameCard player2Card = getPlayer2Card(fieldCards, player1Id);
-
         if (player1Card == null || player2Card == null) {
             throw new IllegalArgumentException("필드 배틀을 진행할 수 없습니다.");
         }
+        player1Card.turnFront();
+        player2Card.turnFront();
 
         Long winnerId = battle(player1Card, player2Card);
 
@@ -164,6 +169,7 @@ public class GameService {
         );
     }
 
+    @Counted("game.playing")
     @Transactional
     public void surrender(Long gameRoomId, Long PlayerId) {
         log.info("surrender playerId: {}", PlayerId);
