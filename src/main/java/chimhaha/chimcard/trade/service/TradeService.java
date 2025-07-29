@@ -12,6 +12,7 @@ import chimhaha.chimcard.trade.event.TradeCompleteOrCancelEvent;
 import chimhaha.chimcard.trade.repository.TradePostRepository;
 import chimhaha.chimcard.trade.repository.TradeRequestRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
+import io.micrometer.core.annotation.Counted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -45,6 +46,7 @@ public class TradeService {
     private final CardService cardService;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Counted("trade.status")
     @Transactional
     public void tradePost(Long accountId, TradePostCreateDto dto) {
         Account owner = getAccount(accountId);
@@ -66,6 +68,7 @@ public class TradeService {
         tradePostRepository.save(tradePost);
     }
 
+    @Counted("trade.status")
     @Transactional
     public void tradeRequest(Long postId, Long requesterId, TradeRequestCreateDto dto) {
         TradePost tradePost = getTradePost(postId);
@@ -86,6 +89,7 @@ public class TradeService {
         tradeRequestRepository.save(tradeRequest);
     }
 
+    @Counted("trade.status")
     @Retryable(
             retryFor = {OptimisticLockingFailureException.class},
             backoff = @Backoff(delay = 100)
@@ -112,6 +116,7 @@ public class TradeService {
         }
     }
 
+    @Counted("trade.status")
     @Retryable(
             retryFor = {OptimisticLockingFailureException.class},
             backoff = @Backoff(delay = 100)
@@ -127,6 +132,7 @@ public class TradeService {
         tradeRequest.reject();
     }
 
+    @Counted("trade.status")
     @Retryable(
             retryFor = {OptimisticLockingFailureException.class},
             backoff = @Backoff(delay = 100)
@@ -148,6 +154,7 @@ public class TradeService {
         }
     }
 
+    @Counted("trade.status")
     @Transactional
     public void requestCancel(Long requestId, Long accountId) {
         TradeRequest tradeRequest = getTradeRequest(requestId);

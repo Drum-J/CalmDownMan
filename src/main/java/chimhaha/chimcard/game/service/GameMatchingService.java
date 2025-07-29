@@ -11,6 +11,7 @@ import chimhaha.chimcard.game.event.MatchingSuccessEvent;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import chimhaha.chimcard.user.repository.AccountRepository;
+import io.micrometer.core.annotation.Counted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -43,6 +44,7 @@ public class GameMatchingService {
     private final Queue<MatchingRequestDto> matchingQueue = new LinkedBlockingQueue<>();
     private final Lock lock = new ReentrantLock();
 
+    @Counted("game.matching")
     public void joinMatching(MatchingRequestDto dto) {
         lock.lock();
         try {
@@ -59,6 +61,7 @@ public class GameMatchingService {
         }
     }
 
+    @Counted("game.matching")
     public void cancelMatching(Long playerId) {
         lock.lock();
         try {
@@ -72,6 +75,7 @@ public class GameMatchingService {
         }
     }
 
+    @Counted("game.matching")
     @Transactional
     public void successMatching() {
         MatchingRequestDto request1 = null;

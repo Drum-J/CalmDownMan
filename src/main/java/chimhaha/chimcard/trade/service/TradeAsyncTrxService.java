@@ -8,6 +8,7 @@ import chimhaha.chimcard.entity.TradeStatus;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.trade.repository.FailedTradeRepository;
 import chimhaha.chimcard.trade.repository.TradeRequestRepository;
+import io.micrometer.core.annotation.Counted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class TradeAsyncTrxService {
     private final FailedTradeRepository failedTradeRepository;
     private final TradeRequestRepository requestRepository;
 
+    @Counted("trade.async")
     public void rollbackRequestCard(Long requestId, TradeStatus status) {
         log.info("rollbackRequestCard Async Thread : [{}] {}, {}",Thread.currentThread().getName(), requestId, status);
         try {
@@ -45,6 +47,7 @@ public class TradeAsyncTrxService {
         }
     }
 
+    @Counted("trade.async")
     public void saveFailedRequest(Long requestId, TradeStatus status) {
         log.info("saveFailedRequest Async Thread : [{}] {}, {}",Thread.currentThread().getName(), requestId, status);
         TradeRequest request = getTradeRequest(requestId);

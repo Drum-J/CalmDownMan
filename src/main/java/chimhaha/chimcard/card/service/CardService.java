@@ -9,6 +9,7 @@ import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.user.repository.AccountRepository;
 import chimhaha.chimcard.utils.CardUtils;
+import io.micrometer.core.annotation.Counted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,7 @@ public class CardService {
         return cardRepository.findByCardSeason(cardSeason);
     }
 
+    @Counted("card.open")
     @Transactional
     public List<Card> cardPackOpen(Long accountId, Long seasonId) {
         Account account = accountRepository.findById(accountId)
