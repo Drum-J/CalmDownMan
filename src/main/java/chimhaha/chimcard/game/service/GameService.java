@@ -202,6 +202,10 @@ public class GameService {
         List<GameCard> playersCards = getGameCardsInLocation(gameRoom.getId(), CardLocation.FIELD)
                 .stream().filter(gc -> gc.getPlayerId().equals(playerId)).toList();
 
+        if (playersCards.size() >= 6) {
+            throw new IllegalArgumentException("필드가 가득 차서 카드를 제출할 수 없습니다.");
+        }
+
         // 기존 필드 카드 전진 player1은 [1] -> [6] / player2는 [1] <- [6] 로 움직임
         for (GameCard fieldCard : playersCards) {
             if (playerId.equals(player1Id)) { // Player1의 카드
