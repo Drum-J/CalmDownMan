@@ -14,13 +14,6 @@ public class GameController {
 
     private final GameService gameService;
 
-    @GetMapping("/{gameRoomId}")
-    public ApiResponse<GameInfoDto> gameInfo(@PathVariable("gameRoomId") Long gameRoomId) {
-        Long playerId = AccountUtils.getAccountId();
-
-        return ApiResponse.success(gameService.gameInfo(gameRoomId, playerId));
-    }
-
     @PostMapping("/{gameRoomId}/cardSubmit")
     public ApiResponse<String> cardSubmit(@PathVariable("gameRoomId") Long gameRoomId, @RequestBody CardSubmitRequestDto dto) {
         Long accountId = AccountUtils.getAccountId();

@@ -278,14 +278,6 @@ public class GameService {
     }
 
     /**
-     * 카드 제출 or 배틀 결과 메세지 전송
-     */
-    private <T> void sendSubmitOrBattleMessage(Long gameRoomId, Long playerId, T data) {
-        String destination = String.format("/queue/game/%s/%s", gameRoomId, playerId);
-        messagingTemplate.convertAndSend(destination, data);
-    }
-
-    /**
      * 카드 승부 발생 체크
      */
     private BattleCardDto checkForBattle(List<GameCard> fieldCards, Long player1Id) {
