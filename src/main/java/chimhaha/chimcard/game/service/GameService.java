@@ -1,22 +1,21 @@
 package chimhaha.chimcard.game.service;
 
-import chimhaha.chimcard.entity.Account;
-import chimhaha.chimcard.entity.CardLocation;
-import chimhaha.chimcard.entity.GameCard;
-import chimhaha.chimcard.entity.GameRoom;
+import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
-import chimhaha.chimcard.game.dto.*;
-import chimhaha.chimcard.game.event.SurrenderEvent;
-import chimhaha.chimcard.game.event.BattleEvent;
-import chimhaha.chimcard.game.event.CardSubmitEvent;
-import chimhaha.chimcard.game.event.GameEndEvent;
+import chimhaha.chimcard.game.dto.BattleCardDto;
+import chimhaha.chimcard.game.dto.FieldCardDto;
+import chimhaha.chimcard.game.dto.GameInfoDto;
+import chimhaha.chimcard.game.dto.MyGameCardDto;
+import chimhaha.chimcard.game.event.*;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
 import io.micrometer.core.annotation.Counted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +26,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static chimhaha.chimcard.common.MessageConstants.*;
+import static chimhaha.chimcard.entity.GameStatus.*;
 import static java.util.Comparator.comparingInt;
 
 @Slf4j
@@ -37,7 +37,6 @@ public class GameService {
 
     private final GameRoomRepository gameRoomRepository;
     private final GameCardRepository gameCardRepository;
-    private final SimpMessagingTemplate messagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
 
     public Long checkGameRoom(Long playerId) {
@@ -47,7 +46,12 @@ public class GameService {
     /**
      * 게임 입장 시 상대 닉네임과 내 게임 카드 로딩
      */
-    public GameInfoDto gameInfo(Long gameRoomId, Long playerId) {
+    @Retryable(
+            retryFor = {OptimisticLockingFailureException.class},
+            backoff = @Backoff(delay = 100)
+    )
+    @Transactional
+    public GameInfoDto gameInfo(Long gameRoomId, Long playerId, String sessionId) {
         GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId)
                 .orElseThrow(() -> new ResourceNotFoundException(GAME_ROOM_NOT_FOUND));
 
@@ -60,6 +64,23 @@ public class GameService {
 
         if (!(player1.getId().equals(playerId) || player2.getId().equals(playerId))) {
             throw new IllegalArgumentException(NOT_MY_GAME);
+        }
+
+        // 세션 ID 저장 로직 추가
+        if (player1.getId().equals(playerId)) {
+            //player1의 재접속, 기존 Session ID 값과 다른 경우
+            if (gameRoom.isDisconnected() && !gameRoom.getP1SessionId().equals(sessionId)) {
+                gameRoom.reconnect();
+                eventPublisher.publishEvent(new ReconnectEvent(gameRoomId, player2.getId()));
+            }
+            gameRoom.updatePlayer1SessionId(sessionId);
+        } else {
+            //player2의 재접속
+            if (gameRoom.isDisconnected() && !gameRoom.getP2SessionId().equals(sessionId)) {
+                gameRoom.reconnect();
+                eventPublisher.publishEvent(new ReconnectEvent(gameRoomId, player1.getId()));
+            }
+            gameRoom.updatePlayer2SessionId(sessionId);
         }
 
         String otherPlayer = player1.getId().equals(playerId) ? player2.getNickname() : player1.getNickname();
@@ -179,6 +200,10 @@ public class GameService {
         log.info("surrender playerId: {}", PlayerId);
         GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId)
                 .orElseThrow(() -> new ResourceNotFoundException(GAME_ROOM_NOT_FOUND));
+
+        if (gameRoom.isFinished()) {
+            throw new IllegalArgumentException("이미 종료된 게임입니다.");
+        }
 
         Long player1Id = gameRoom.getPlayer1().getId();
         Long player2Id = gameRoom.getPlayer2().getId();
