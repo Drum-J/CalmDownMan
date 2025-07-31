@@ -40,6 +40,10 @@ public class GameService {
     private final SimpMessagingTemplate messagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
 
+    public Long checkGameRoom(Long playerId) {
+        return gameRoomRepository.findByPlayerIdAndStatus(playerId, List.of(DISCONNECTED, PLAYING)).map(GameRoom::getId).orElse(null);
+    }
+
     /**
      * 게임 입장 시 상대 닉네임과 내 게임 카드 로딩
      */
