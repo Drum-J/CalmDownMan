@@ -114,6 +114,9 @@ public class GameEventListener {
         messagingTemplate.convertAndSend(destination, new ConnectMessageDto(RECONNECT));
     }
 
+    @TransactionalEventListener
+    public void timeout(TimeoutEvent event) {
+        sendMessage(event.gameRoomId(), event.playerId(), new SurrenderMessageDto(event.gameWinnerId()));
     }
 
     private void sendMatchSuccessMessage(Long gameRoomId, Long playerId) {

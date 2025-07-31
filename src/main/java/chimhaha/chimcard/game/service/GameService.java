@@ -220,6 +220,22 @@ public class GameService {
         eventPublisher.publishEvent(new GameEndEvent(gameRoomId));
     }
 
+    @Counted("game.playing")
+    @Transactional
+    public void timeout(Long gameRoomId, Long playerId) {
+        GameRoom gameRoom = gameRoomRepository.findWithPlayersById(gameRoomId)
+                .orElseThrow(() -> new ResourceNotFoundException(GAME_ROOM_NOT_FOUND));
+
+        // 60초 제한이 지난 후 여전히 연결이 끊겨있으면?
+        if (gameRoom.isDisconnected()) {
+            gameRoom.gameWinner(playerId); // 게임 방에 남아있는 사람이 승리
+            eventPublisher.publishEvent(new TimeoutEvent(gameRoomId, playerId, gameRoom.getWinnerId()));
+            eventPublisher.publishEvent(new GameEndEvent(gameRoomId));
+        } else {
+            throw new IllegalArgumentException("재연결 되었거나 끝난 게임입니다. 새로고침을 시도해주세요.");
+        }
+    }
+
     /**
      * 카드 제출 및 필드 카드 이동
      */

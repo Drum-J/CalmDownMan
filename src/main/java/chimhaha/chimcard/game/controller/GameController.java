@@ -47,4 +47,8 @@ public class GameController {
         gameService.surrender(gameRoomId, dto.playerId());
     }
 
+    @PostMapping("/{gameRoomId}/timeout")
+    public void timeout(@PathVariable("gameRoomId") Long gameRoomId, @RequestBody SurrenderDto dto) {
+        gameService.timeout(gameRoomId, dto.playerId());
+    }
 }
