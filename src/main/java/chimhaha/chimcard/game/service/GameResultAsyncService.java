@@ -38,7 +38,7 @@ public class GameResultAsyncService {
         Account player1 = gameRoom.getPlayer1();
         Account player2 = gameRoom.getPlayer2();
 
-        if (winnerId == null) { // 무승부
+        if (winnerId == 0L) { // 무승부
             player1.increasePoint(POINT_DRAW_GAME);
             player1.updateRankScore(DRAW_RANK_SCORE);
 
