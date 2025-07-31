@@ -20,4 +20,7 @@ public class MessageConstants {
     public static final String NOT_MY_TURN = "내 턴이 아닙니다.";
     public static final String NOT_MY_CARD = "자신의 카드가 아닙니다.";
     public static final String NOT_IN_HAND = "손패에 있는 카드가 아닙니다.";
+
+    public static final String DISCONNECT = "DISCONNECT";
+    public static final String RECONNECT = "RECONNECT";
 }
