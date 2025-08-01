@@ -34,6 +34,10 @@ public class Account extends TimeStamped {
     @Enumerated(value = STRING)
     private AccountRole role;
 
+    private int win;
+    private int lose;
+    private int draw;
+
     @Version
     private Long version;
 
@@ -87,6 +91,18 @@ public class Account extends TimeStamped {
 
     public boolean equals(Long accountId) {
         return Objects.equals(id, accountId);
+    }
+
+    public void win() {
+        win++;
+    }
+
+    public void lose() {
+        lose++;
+    }
+
+    public void draw() {
+        draw++;
     }
 
     @Override

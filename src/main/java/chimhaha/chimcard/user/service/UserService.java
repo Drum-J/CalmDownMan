@@ -2,6 +2,8 @@ package chimhaha.chimcard.user.service;
 
 import chimhaha.chimcard.entity.Account;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
+import chimhaha.chimcard.game.dto.GameRecordDto;
+import chimhaha.chimcard.game.repository.GameCustomRepository;
 import chimhaha.chimcard.user.dto.UserDetailDto;
 import chimhaha.chimcard.user.dto.UserUpdateDto;
 import chimhaha.chimcard.user.repository.AccountRepository;
@@ -18,6 +20,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.List;
 
 import static chimhaha.chimcard.common.MessageConstants.ACCOUNT_NOT_FOUND;
 
@@ -30,6 +33,7 @@ public class UserService {
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
     private final S3Client s3Client;
+    private final GameCustomRepository gameCustomRepository;
 
     public UserDetailDto getMyInfo(Long accountId) {
         Account account = getAccount(accountId);
@@ -72,6 +76,11 @@ public class UserService {
         } catch (IOException e) {
             throw new IllegalStateException(e.getMessage());
         }
+    }
+
+    // 마이페이지 > 게임 전적
+    public List<GameRecordDto> gameRecords(Long accountId) {
+        return gameCustomRepository.getMyGameRecords(accountId);
     }
 
     private Account getAccount(Long accountId) {

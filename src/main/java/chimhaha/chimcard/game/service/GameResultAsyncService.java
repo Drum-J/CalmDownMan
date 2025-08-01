@@ -41,9 +41,11 @@ public class GameResultAsyncService {
         if (winnerId == 0L) { // 무승부
             player1.increasePoint(POINT_DRAW_GAME);
             player1.updateRankScore(DRAW_RANK_SCORE);
+            player1.draw();
 
             player2.increasePoint(POINT_DRAW_GAME);
             player2.updateRankScore(DRAW_RANK_SCORE);
+            player2.draw();
             return;
         }
 
@@ -51,16 +53,20 @@ public class GameResultAsyncService {
             //player1 승리
             player1.increasePoint(POINT_FOR_WINNER);
             player1.updateRankScore(WINNER_RANK_SCORE);
+            player1.win();
 
             player2.increasePoint(POINT_FOR_LOSER);
             player2.updateRankScore(LOSER_RANK_SCORE);
+            player2.lose();
         } else if (winnerId.equals(player2.getId())) {
             //player2 승리
             player2.increasePoint(POINT_FOR_WINNER);
             player2.updateRankScore(WINNER_RANK_SCORE);
+            player2.win();
 
             player1.increasePoint(POINT_FOR_LOSER);
             player1.updateRankScore(LOSER_RANK_SCORE);
+            player1.lose();
         }
     }
 }

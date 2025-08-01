@@ -1,6 +1,7 @@
 package chimhaha.chimcard.user.controller;
 
 import chimhaha.chimcard.common.ApiResponse;
+import chimhaha.chimcard.game.dto.GameRecordDto;
 import chimhaha.chimcard.user.dto.PasswordCheckDto;
 import chimhaha.chimcard.user.dto.UserDetailDto;
 import chimhaha.chimcard.user.dto.UserUpdateDto;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -40,5 +43,12 @@ public class UserController {
         Long accountId = AccountUtils.getAccountId();
         userService.update(accountId, dto);
         return null;
+    }
+
+    @GetMapping("/gameRecords")
+    public ApiResponse<List<GameRecordDto>> gameRecords() {
+        Long accountId = AccountUtils.getAccountId();
+
+        return ApiResponse.success(userService.gameRecords(accountId));
     }
 }
