@@ -1,11 +1,13 @@
 package chimhaha.chimcard.game.controller;
 
 import chimhaha.chimcard.common.ApiResponse;
+import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.MatchingRequestDto;
 import chimhaha.chimcard.game.service.GameMatchingService;
 import chimhaha.chimcard.utils.AccountUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -30,8 +32,12 @@ public class GameMatchingController {
     @DeleteMapping("/cancel")
     public ApiResponse<String> cancel() {
         Long accountId = AccountUtils.getAccountId();
-        gameMatchingService.cancelMatching(accountId);
+        boolean result = gameMatchingService.cancelMatching(accountId);
 
-        return ApiResponse.success("매칭 취소가 완료되었습니다.");
+        if (result) {
+            return ApiResponse.success("매칭 취소가 완료되었습니다.");
+        } else {
+            throw new ResourceNotFoundException("매칭 취소 데이터를 찾을 수 없습니다.");
+        }
     }
 }

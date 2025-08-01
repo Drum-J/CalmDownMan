@@ -13,11 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+
+import java.util.Map;
 
 import static chimhaha.chimcard.common.MessageConstants.*;
 
@@ -76,12 +79,27 @@ public class GameEventListener {
         String sessionId = event.getSessionId();
 
         log.info("disconnect Session Id {}",sessionId);
+
+        // 매칭 도중 연결이 끊겼을 때
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+        Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+        if (sessionAttributes != null && sessionAttributes.containsKey("playerId")) {
+            Long playerId = (Long) sessionAttributes.get("playerId");
+            log.info("playerId: {}", playerId);
+            // 매칭 취소
+            gameMatchingService.cancelMatching(playerId);
+            return;
+        }
+
+        // 게임 진행 중 연결이 끊겼을 때
         gameRoomRepository.findWithPlayersBySessionId(sessionId).ifPresent(gameRoom -> {
+            // 게임이 끝나서 연결이 끊긴 경우
             if (gameRoom.getStatus().equals(GameStatus.FINISHED)) {
                 log.info("gameRoom is finished. skip disconnect event.");
                 return;
             }
 
+            // 한 플레이어가 연결이 끊겼는데 다른 플레이어도 연결이 끊긴 경우
             if (gameRoom.getStatus().equals(GameStatus.DISCONNECTED)) {
                 log.info("all players disconnected. game end");
                 gameRoom.gameWinner(0L); // 양측 모두 연결 해제 시 무승부 처리

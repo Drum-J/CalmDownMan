@@ -48,7 +48,6 @@ public class GameMatchingService {
     public void joinMatching(MatchingRequestDto dto) {
         lock.lock();
         try {
-            log.info("async joinMatching: [{}]", Thread.currentThread().getName());
             if(matchingMap.containsKey(dto.playerId())) {
                 throw new IllegalArgumentException("이미 매칭 대기열에 등록 되어있습니다.");
             }
@@ -62,17 +61,19 @@ public class GameMatchingService {
     }
 
     @Counted("game.matching")
-    public void cancelMatching(Long playerId) {
+    public boolean cancelMatching(Long playerId) {
         lock.lock();
         try {
             MatchingRequestDto cancelRequest = matchingMap.remove(playerId);
             log.info("cancelRequest: {}", cancelRequest);
             if (cancelRequest != null) {
                 matchingQueue.remove(cancelRequest);
+                return true;
             }
         } finally {
             lock.unlock();
         }
+        return false;
     }
 
     @Counted("game.matching")
