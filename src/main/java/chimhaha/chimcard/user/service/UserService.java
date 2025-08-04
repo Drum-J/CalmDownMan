@@ -1,6 +1,7 @@
 package chimhaha.chimcard.user.service;
 
 import chimhaha.chimcard.common.AwsProperties;
+import chimhaha.chimcard.common.FileValidator;
 import chimhaha.chimcard.entity.Account;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.GameRecordDto;
@@ -65,8 +66,8 @@ public class UserService {
         }
 
         if (dto.profileImage() != null && !dto.profileImage().isEmpty()) {
-            String imageUrl = uploadImage(accountId, dto.profileImage());
-            account.updateProfileImage(awsProperties.getS3().prefix() + imageUrl);
+            FileValidator.validate(dto.profileImage());
+            account.updateProfileImage(uploadImage(accountId, dto.profileImage()));
         }
         return new UserDetailDto(account);
     }
@@ -97,7 +98,7 @@ public class UserService {
 
             s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
 
-            return request.key();
+            return awsProperties.getS3().prefix() + key;
         } catch (IOException e) {
             throw new IllegalStateException("프로필 이미지 등록에 실패했습니다.", e);
         }
