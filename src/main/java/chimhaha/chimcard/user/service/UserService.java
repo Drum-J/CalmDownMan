@@ -1,5 +1,6 @@
 package chimhaha.chimcard.user.service;
 
+import chimhaha.chimcard.common.AwsProperties;
 import chimhaha.chimcard.entity.Account;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.GameRecordDto;
@@ -16,13 +17,13 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.util.List;
 
 import static chimhaha.chimcard.common.MessageConstants.ACCOUNT_NOT_FOUND;
+import static chimhaha.chimcard.common.MessageConstants.EXIST_NICKNAME;
 
 @Slf4j
 @Service
@@ -34,6 +35,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final S3Client s3Client;
     private final GameCustomRepository gameCustomRepository;
+    private final AwsProperties awsProperties;
 
     public UserDetailDto getMyInfo(Long accountId) {
         Account account = getAccount(accountId);
@@ -47,35 +49,26 @@ public class UserService {
         return passwordEncoder.matches(password, account.getPassword());
     }
 
-    /*@Transactional*/
-    public void update(Long accountId, UserUpdateDto dto) {
-        try {
-            Account account = getAccount(accountId);
+    @Transactional
+    public UserDetailDto update(Long accountId, UserUpdateDto dto) {
+        Account account = getAccount(accountId);
 
-            if (StringUtils.hasText(dto.nickname()) && !dto.nickname().equals(account.getNickname())) {
-                log.info("변경 닉네임: {} -> {}", account.getNickname(), dto.nickname());
-                /*account.updateNickname(dto.nickname());*/
+        if (StringUtils.hasText(dto.nickname()) && !dto.nickname().equals(account.getNickname())) {
+            if (accountRepository.existsByNickname(dto.nickname())) {
+                throw new IllegalArgumentException(EXIST_NICKNAME);
             }
-
-            if (StringUtils.hasText(dto.password())) {
-                log.info("변경 비밀번호: {}", dto.password());
-                /*account.updatePassword(passwordEncoder.encode(dto.password()));*/
-            }
-
-            // TODO 프로필 이미지는 S3 등록 필요
-            if (dto.profileImage() != null && !dto.profileImage().isEmpty()) {
-                String oldProfile = account.getProfileImage();
-                String imageUrl = uploadImage(accountId, dto.profileImage());
-                log.info("변경 프로필 이미지: {} -> {}", oldProfile, imageUrl);
-                /*account.updateProfileImage(imageUrl);*/
-
-                if (StringUtils.hasText(oldProfile)) {
-                    deleteImage(accountId, oldProfile);
-                }
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException(e.getMessage());
+            account.updateNickname(dto.nickname());
         }
+
+        if (StringUtils.hasText(dto.password())) {
+            account.updatePassword(passwordEncoder.encode(dto.password()));
+        }
+
+        if (dto.profileImage() != null && !dto.profileImage().isEmpty()) {
+            String imageUrl = uploadImage(accountId, dto.profileImage());
+            account.updateProfileImage(awsProperties.getS3().prefix() + imageUrl);
+        }
+        return new UserDetailDto(account);
     }
 
     // 마이페이지 > 게임 전적
@@ -88,34 +81,26 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
     }
 
-    private String uploadImage(Long accountId, MultipartFile file) throws IOException {
-        String fileName = file.getOriginalFilename();
+    private String uploadImage(Long accountId, MultipartFile file) {
+        String key = "user/profile/" + accountId;
         String contentType = file.getContentType();
         long size = file.getSize();
 
 
-        PutObjectRequest request = PutObjectRequest.builder()
-                .bucket("profile-image") // bucket 이름 설정
-                .key(accountId + "/" + fileName) // 아마 파일이름
-                .contentType(contentType)
-                .contentLength(size)
-                .build();
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(awsProperties.getS3().bucket()) // bucket 이름 설정
+                    .key(key)
+                    .contentType(contentType)
+                    .contentLength(size)
+                    .build();
 
-        s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
+            s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
 
-        return request.key();
-    }
-
-    private void deleteImage(Long accountId, String imageUrl) {
-        // S3에서 이미지 삭제 로직 구현
-        log.info("S3에서 기존 이미지 삭제를 시도합니다: {}", imageUrl);
-
-        DeleteObjectRequest request = DeleteObjectRequest.builder()
-                .bucket("profile-image")
-                .key(imageUrl)
-                .build();
-
-        s3Client.deleteObject(request);
+            return request.key();
+        } catch (IOException e) {
+            throw new IllegalStateException("프로필 이미지 등록에 실패했습니다.", e);
+        }
     }
 
 }

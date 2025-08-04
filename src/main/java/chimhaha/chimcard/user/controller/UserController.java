@@ -38,11 +38,10 @@ public class UserController {
     }
 
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<String> update(UserUpdateDto dto) {
-        log.info("dto: {}", dto);
+    public ApiResponse<UserDetailDto> update(UserUpdateDto dto) {
         Long accountId = AccountUtils.getAccountId();
-        userService.update(accountId, dto);
-        return null;
+
+        return ApiResponse.success(userService.update(accountId, dto));
     }
 
     @GetMapping("/gameRecords")
