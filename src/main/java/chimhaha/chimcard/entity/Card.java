@@ -53,6 +53,11 @@ public class Card extends TimeStamped {
         this.power = power;
     }
 
+    public void update(String title, int power, AttackType attackType, Grade grade, String imageUrl) {
+        update(title,power, attackType, grade);
+        this.imageUrl = imageUrl;
+    }
+
     // 승: 1 무승부: 0 패: -1
     public int match(Card other) {
         int typeResult = matchType(this, other);
