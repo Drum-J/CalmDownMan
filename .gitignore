@@ -38,6 +38,3 @@ out/
 
 ### queryDsl ###
 src/main/generated
-
-### application.yml ###
-src/**/resources/application.yml

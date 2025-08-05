@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    url: "jdbc:mysql://localhost/calmdownman"
+    username: "username"
+    password: "password"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        show_sql: false
+  test:
+    database:
+      replace: none
+  cloud:
+    aws:
+      region: ap-northeast-2
+      s3:
+        bucket: testBucket
+        access-key: testAccessKey
+        secret-key: testSecretKey
+        prefix: testPrefix
+
+jwt:
+  secret: TestJwtSecretKeyUseNotSpringBootTestAndApplicationProperties
+  issuer: "(주)금병영"
+  token: eyJhbGciOiJIUzM4NCJ9.eyJpZCI6MSwibmlja25hbWUiOiJ0ZXN0VXNlciIsInJvbGUiOiJBRE1JTiIsImlzcyI6Iijso7wp6riI67OR7JiBIiwiaWF0IjoxNzU0MzU3MDUyLCJleHAiOjE4NDA2NzA2NTJ9.cMlGfc1Hj9m3rzeZvMU1RJnujejZP0AGQQnhCcjsiBgkjnHQiR0CDyTfNRY9BxlF
+
+logging:
+  level:
+    org.hibernate.orm.connections.pooling: warn
+
+custom:
+  monitoring:
+    username: "username"
+    password: "password"
+    role: "ROLE"
