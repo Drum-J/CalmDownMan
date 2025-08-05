@@ -47,7 +47,7 @@ public class CardTradeTest extends QueryDslTest {
     void beforeCardTrade() throws Exception {
         //given
         Long accountId = 1L;
-        Long[] cardIds = {2L, 24L, 24L, 24L, 67L};
+        Long[] cardIds = {1L, 3L, 5L, 5L, 6L};
 
         // 1. 요청 수량을 세서 Map<Long cardId, Long count> 생성 ex) {2=1, 24=3, 67=1}
         Map<Long, Long> requestedCounts = Arrays.stream(cardIds)
@@ -98,7 +98,7 @@ public class CardTradeTest extends QueryDslTest {
     void beforeCardTradeSimple() throws Exception {
         //given
         Long accountId = 1L;
-        Long[] cardIds = {2L, 24L, 24L, 24L, 67L};
+        Long[] cardIds = {1L, 3L, 5L, 5L, 6L};
 
         //when
 
@@ -125,10 +125,10 @@ public class CardTradeTest extends QueryDslTest {
     void afterTrade() throws Exception {
         //given
         Long traderId = 1L; // 교환 등록자
-        Long[] tradeCardIds = {2L, 24L, 24L, 24L, 67L}; // 교환 등록 카드
+        Long[] tradeCardIds = {1L, 3L, 5L, 5L, 6L}; // 교환 등록 카드
 
-        Long accountId = 8L; // 교환 받을 사람
-        Long[] cardIds = {6L}; //교환 해줄 카드
+        Long accountId = 2L; // 교환 받을 사람
+        Long[] cardIds = {2L, 4L}; //교환 해줄 카드
 
         // 내 계정에 등록할 상대 카드 Map
         Account myAccount = accountRepository.findById(accountId)

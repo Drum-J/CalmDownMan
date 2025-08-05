@@ -36,8 +36,8 @@ public class TradeCompleteTest extends QueryDslTest {
     @DisplayName("교환 성공")
     void tradeComplete() throws Exception {
         //given
-        Long ownerId = 8L;
-        Long tradePostId = 2L; // 내 교환글
+        Long ownerId = 1L;
+        Long tradePostId = 1L; // 내 교환글
         Long tradeRequestId = 1L; // 교환 신청 목록 중 하나를 선택
 
         //when

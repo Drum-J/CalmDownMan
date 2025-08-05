@@ -26,7 +26,7 @@ public class TradePostRepositoryTest extends QueryDslTest {
     @Test
     void postTest() throws Exception {
         Long traderId = 1L;
-        List<Long> cardIds = List.of(2L, 24L, 24L, 24L, 67L);
+        List<Long> cardIds = List.of(1L, 3L, 5L, 5L, 6L);
 
         Map<Long, Long> ownerCardCounts = cardIds.stream()
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
