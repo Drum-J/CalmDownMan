@@ -99,7 +99,7 @@ public class SignUpTest {
         //given
         SignUpDto dto = SignUpDto.builder()
                 .username("testUsername")
-                .nickname("drumj")
+                .nickname("승호")
                 .password("test123!")
                 .build();
 
@@ -115,7 +115,7 @@ public class SignUpTest {
                 .andExpect(jsonPath("message").value(BAD_REQUEST.getReasonPhrase()))
                 .andExpect(jsonPath("time").exists())
                 //T data
-                .andExpect(jsonPath("data").value("이미 사용 중인 닉네임입니다."));
+                .andExpect(jsonPath("data").value("사용 중인 닉네임입니다."));
     }
 
     @Test
@@ -141,7 +141,7 @@ public class SignUpTest {
                 .andExpect(jsonPath("time").exists())
                 //T data
                 .andExpect(jsonPath("data")
-                        .value("비밀번호는 영문, 숫자, 특수문자 포함 8~20글자 이하로 입력해 주세요."));
+                        .value("password"));
     }
 
     @Test
