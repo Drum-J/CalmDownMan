@@ -6,12 +6,14 @@ import chimhaha.chimcard.entity.AttackType;
 import chimhaha.chimcard.entity.Card;
 import chimhaha.chimcard.entity.CardSeason;
 import chimhaha.chimcard.entity.Grade;
+import chimhaha.chimcard.jwt.JwtProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -19,7 +21,7 @@ import java.util.List;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -31,10 +33,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class CardControllerUnitTest {
 
     @Autowired private MockMvc mvc;
+    @MockitoBean private JwtProvider jwtProvider;
     @MockitoBean private CardService cardService;
     @MockitoBean private JpaMetamodelMappingContext jpaMetamodelMappingContext; // JpaAuditing 사용 중이라 추가해야 됨
 
     @Test
+    @WithMockUser
     @DisplayName("ID: 1 카드 조회 성공")
     void getCardById() throws Exception {
         //given
@@ -69,6 +73,7 @@ public class CardControllerUnitTest {
     }
 
     @Test
+    @WithMockUser
     @DisplayName("ID: 2 카드 조회 실패")
     void getCardById_NotFound() throws Exception {
         //given
@@ -80,10 +85,10 @@ public class CardControllerUnitTest {
         //then
         mvc.perform(get("/api/card/{id}", 2L))
                 .andDo(print())
-                .andExpect(status().isNotFound())
+                .andExpect(status().isBadRequest())
                 //ApiResponse 공통
-                .andExpect(jsonPath("status").value(NOT_FOUND.value()))
-                .andExpect(jsonPath("message").value(NOT_FOUND.getReasonPhrase()))
+                .andExpect(jsonPath("status").value(BAD_REQUEST.value()))
+                .andExpect(jsonPath("message").value(BAD_REQUEST.getReasonPhrase()))
                 .andExpect(jsonPath("time").exists())
                 //e.message()
                 .andExpect(jsonPath("data").value(e.getMessage()));
@@ -92,6 +97,7 @@ public class CardControllerUnitTest {
     }
 
     @Test
+    @WithMockUser
     @DisplayName("카드 시즌 전체 조회 성공")
     void getSeasons() throws Exception {
         //given
@@ -121,6 +127,7 @@ public class CardControllerUnitTest {
     }
     
     @Test
+    @WithMockUser
     @DisplayName("시즌 별 카드 조회")
     void getCardsBySeason() throws Exception {
         //given
@@ -157,6 +164,7 @@ public class CardControllerUnitTest {
     }
 
     @Test
+    @WithMockUser
     @DisplayName("시즌 별 카드 조회 실패")
     void getCardsBySeason_NotFound() throws Exception {
         //given
@@ -167,16 +175,17 @@ public class CardControllerUnitTest {
         //then
         mvc.perform(get("/api/card/season/{id}", 2L))
                 .andDo(print())
-                .andExpect(status().isNotFound())
+                .andExpect(status().isBadRequest())
                 // ApiResponse 공통
-                .andExpect(jsonPath("status").value(NOT_FOUND.value()))
-                .andExpect(jsonPath("message").value(NOT_FOUND.getReasonPhrase()))
+                .andExpect(jsonPath("status").value(BAD_REQUEST.value()))
+                .andExpect(jsonPath("message").value(BAD_REQUEST.getReasonPhrase()))
                 .andExpect(jsonPath("time").exists())
                 // T data
                 .andExpect(jsonPath("data").value(e.getMessage()));
     }
 
     @Test
+    @WithMockUser
     @DisplayName("등록된 카드가 없어도 에러는 발생하지 않음")
     void cards_empty() throws Exception {
         //given
@@ -199,6 +208,7 @@ public class CardControllerUnitTest {
     }
 
     @Test
+    @WithMockUser
     @DisplayName("전체 카드 조회")
     void cards() throws Exception {
         //given

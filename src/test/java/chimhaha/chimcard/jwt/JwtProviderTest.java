@@ -4,24 +4,40 @@ import chimhaha.chimcard.exception.InvalidTokenException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.crypto.SecretKey;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Date;
+import java.util.Map;
 
 import static chimhaha.chimcard.entity.AccountRole.ADMIN;
 
 class JwtProviderTest {
 
-    private String secret = "";
+    private String issuer;
+    private SecretKey secretKey;
+    private String token;
 
-    private long expiration = 1000 * 60; // 1분
+    @BeforeEach
+    void setUp() {
+        try (FileReader fileReader = new FileReader("src/test/resources/application.yml")) {
+            Yaml yaml = new Yaml();
+            Map<String, Object> data = yaml.load(fileReader);
 
-    private long refreshExpiration = 1000 * 60 * 5; // 5분
+            Map<String, Object> jwt = (Map<String, Object>) data.get("jwt");
 
-    private String issuer = "(주)금병영";
-
-    private SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+            String secret = (String) jwt.get("secret");
+            issuer = (String) jwt.get("issuer");
+            secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+            token = (String) jwt.get("token");
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
 
     @Test
     void generateToken() throws Exception {
@@ -29,6 +45,8 @@ class JwtProviderTest {
         Date now = new Date();
 
         //when
+        long expiration = 1000L * 60 * 60 * 24 * 999;
+        long refreshExpiration = 1000L * 60 * 60 * 24 * 999;
         String accessToken = tokenBuilder(now, expiration);
         String refreshToken = tokenBuilder(now, refreshExpiration);
 
@@ -40,8 +58,6 @@ class JwtProviderTest {
     @Test
     void validateToken() {
         // generateToken()에서 생성된 token 값 사용
-        String token = "";
-
         try {
             Jws<Claims> claims = parseToken(token);
 
@@ -75,7 +91,7 @@ class JwtProviderTest {
 
     private Claims getClaims() {
         return Jwts.claims()
-                .add("id",1)
+                .add("id",1L)
                 .add("nickname","testUser")
                 .add("role", ADMIN.name())
                 .build();
