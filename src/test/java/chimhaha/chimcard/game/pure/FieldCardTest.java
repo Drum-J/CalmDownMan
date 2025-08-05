@@ -70,35 +70,23 @@ public class FieldCardTest {
             addCardToField(cards1.get(i), player1.id()); //player1 카드 제출
             addCardToField(cards2.get(i), player2.id()); //player2 카드 제출
         }
+
+        // [0] [1] [null] [null] [4] [5]
+        assertEquals(1, currentPlayer1FieldIndex);
+        assertEquals(4, currentPlayer2FieldIndex);
     }
 
     @Test
-    @DisplayName("각각 3턴씩 카드제출")
+    @DisplayName("각각 3턴씩 카드제출, player2의 카드 제출 이후 즉시 카드 배틀 실행")
     void turn3() throws Exception {
         for (int i = 0; i < 3; i++) {
             addCardToField(cards1.get(i), player1.id()); //player1 카드 제출
             addCardToField(cards2.get(i), player2.id()); //player2 카드 제출
         }
-    }
 
-    @Test
-    @DisplayName("필드가 가득 찼을때는 더 이상 제출할 수 없음.")
-    void turn4() throws Exception {
-        for (int i = 0; i < 3; i++) {
-            addCardToField(cards1.get(i), player1.id()); //player1 카드 제출
-            addCardToField(cards2.get(i), player2.id()); //player2 카드 제출
-        }
-
-        assertAll(
-                () -> {
-                    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> addCardToField(cards1.get(3), player1.id()));
-                    assertEquals("더 이상 카드를 제출할 수 없습니다. playerId: " + player1.id(), exception.getMessage());
-                },
-                () -> {
-                    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> addCardToField(cards2.get(3), player2.id()));
-                    assertEquals("더 이상 카드를 제출할 수 없습니다. playerId: " + player2.id(), exception.getMessage());
-                }
-        );
+        // [0] [1] [null] [3] [4] [5]
+        assertEquals(1, currentPlayer1FieldIndex);
+        assertEquals(3, currentPlayer2FieldIndex);
     }
 
     @Test
