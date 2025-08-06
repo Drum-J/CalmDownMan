@@ -138,5 +138,5 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          aws s3 cp s3://${{ secrets.AWS_S3_BUCKET_NAME }}/${{ env.JAR_FILE }} /home/ec2-user/app/
+          aws s3 cp s3://${{ secrets.AWS_CICD_BUCKET }}/${{ env.JAR_FILE }} /home/ec2-user/app/
           /home/ec2-user/app/deploy.sh
