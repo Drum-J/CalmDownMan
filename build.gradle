@@ -93,3 +93,7 @@ tasks.withType(JavaCompile) {
             "-Aquerydsl.excludedPackages=java,javax"
     ]
 }
+
+jar {
+    enabled = false
+}
