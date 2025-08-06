@@ -64,7 +64,7 @@ jobs:
     
     # 빌드 결과물 아티팩트 업로드
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: chimonca-jar
         path: build/libs/*.jar
@@ -109,7 +109,7 @@ jobs:
     steps:
     # build에서 업로드한 아티팩트(jar 파일)를 다운로드합니다.
     - name: Download Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: chimonca-jar
 
