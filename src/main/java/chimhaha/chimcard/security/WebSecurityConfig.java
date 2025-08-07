@@ -43,7 +43,7 @@ public class WebSecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/ws-connection/**", "/api/login", "/api/token/**", "/api/signup/**").permitAll()
+                        .requestMatchers("/ws-connection/**", "/api/login", "/api/token/**", "/api/signup/**","/hello").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
