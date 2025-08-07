@@ -61,6 +61,7 @@ public class WebSecurityConfig {
         CorsConfiguration cors = new CorsConfiguration();
         cors.addAllowedOrigin("http://localhost:5173");
         cors.addAllowedOrigin("https://chimonca.vercel.app");
+        cors.addAllowedOrigin("https://api.chimonca.store");
         cors.addAllowedHeader("*");
         cors.addAllowedMethod("*");
         cors.setAllowCredentials(true);
