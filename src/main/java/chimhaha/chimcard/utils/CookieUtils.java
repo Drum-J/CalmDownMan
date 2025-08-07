@@ -1,11 +1,10 @@
 package chimhaha.chimcard.utils;
 
-import org.springframework.boot.web.server.Cookie;
 import org.springframework.http.ResponseCookie;
 
 import java.time.Duration;
 
-import static org.springframework.boot.web.server.Cookie.SameSite.STRICT;
+import static org.springframework.boot.web.server.Cookie.SameSite.NONE;
 
 public class CookieUtils {
 
@@ -15,9 +14,10 @@ public class CookieUtils {
         return ResponseCookie.from(REFRESH_TOKEN, refreshToken)
                 .path("/api/token") // 이 경로로 요청할 때 쿠키 자동 전송
                 .httpOnly(true) // JS 접근 불가
-                .secure(false) // HTTPS 환경에서만 쿠키 전송
+                .secure(true) // HTTPS 환경에서만 쿠키 전송
 //                .sameSite(STRICT.attributeValue()) // 다른 사이트에서 오는 요청(CSRF)에는 쿠키를 전송하지 않음
-                .sameSite("Lax")
+                .sameSite(NONE.attributeValue())
+                .domain(".chimonca.store")
                 .maxAge(Duration.ofDays(7)) // 수명
                 .build();
     }
@@ -28,7 +28,8 @@ public class CookieUtils {
                 .path("/api/token")
                 .httpOnly(true)
                 .secure(true)
-                .sameSite(STRICT.attributeValue())
+                .sameSite(NONE.attributeValue())
+                .domain(".chimonca.store")
                 .maxAge(0) // 수명 0초
                 .build();
     }
