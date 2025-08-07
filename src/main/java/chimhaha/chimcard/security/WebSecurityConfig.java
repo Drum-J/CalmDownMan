@@ -59,9 +59,8 @@ public class WebSecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cors = new CorsConfiguration();
-        cors.addAllowedOrigin("http://localhost:5173");
-        cors.addAllowedOrigin("https://chimonca.vercel.app");
-        cors.addAllowedOrigin("https://api.chimonca.store");
+        cors.addAllowedOrigin("http://localhost:5173"); // 로컬 프론트
+        cors.addAllowedOrigin("https://www.chimonca.store"); // 프론트
         cors.addAllowedHeader("*");
         cors.addAllowedMethod("*");
         cors.setAllowCredentials(true);
