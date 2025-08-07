@@ -17,4 +17,12 @@ public class AwsProperties {
 
     public record S3Properties(String bucket, String accessKey, String secretKey, String prefix) {
     }
+
+    @Override
+    public String toString() {
+        return "AwsProperties{" +
+                "region='" + region + '\'' +
+                ", s3=" + s3 +
+                '}';
+    }
 }

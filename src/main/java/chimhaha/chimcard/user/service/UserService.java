@@ -87,6 +87,7 @@ public class UserService {
         String contentType = file.getContentType();
         long size = file.getSize();
 
+        log.info("{}",awsProperties);
 
         try {
             PutObjectRequest request = PutObjectRequest.builder()
