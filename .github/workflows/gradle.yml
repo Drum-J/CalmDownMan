@@ -37,7 +37,7 @@ jobs:
         spring.datasource.username: ${{ secrets.SPRING_DATASOURCE_USERNAME }} 
         spring.datasource.password: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
         spring.cloud.aws.region: ${{ secrets.AWS_REGION }}
-        spring.cloud.aws.s3.bucekt: ${{ secrets.AWS_S3_BUCKET }}
+        spring.cloud.aws.s3.bucket: ${{ secrets.AWS_S3_BUCKET }}
         spring.cloud.aws.s3.access-key: ${{ secrets.AWS_S3_ACCESS_KEY }}
         spring.cloud.aws.s3.secret-key: ${{ secrets.AWS_S3_SECRET_KEY }}
         spring.cloud.aws.s3.prefix: ${{ secrets.AWS_S3_PREFIX }}
