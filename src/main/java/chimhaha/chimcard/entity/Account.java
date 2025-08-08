@@ -26,7 +26,7 @@ public class Account extends TimeStamped {
     private String password;
     private String nickname;
     private Integer point;
-    private Integer rankScore;
+    private int rankScore;
     private String profileImage;
     @Column(length = 500)
     private String refreshToken;
