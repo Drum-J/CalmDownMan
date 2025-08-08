@@ -18,7 +18,15 @@ public class CustomLogAop {
             "execution(* chimhaha.chimcard..service..*(..)) || " +
             "execution(* chimhaha.chimcard..repository..*(..))")
     public Object logExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
-        Logger log = LoggerFactory.getLogger(joinPoint.getTarget().getClass());
+        String fullClassName = joinPoint.getSignature().getDeclaringTypeName();
+        int firstDot = fullClassName.indexOf(".");
+        if (firstDot != -1) {
+            int secondDot = fullClassName.indexOf(".", firstDot + 1);
+            if (secondDot != -1) {
+                fullClassName = fullClassName.substring(secondDot + 1);
+            }
+        }
+        Logger log = LoggerFactory.getLogger(fullClassName);
         String methodName = joinPoint.getSignature().getName();
 
         // 현재 깊이를 가져오고, 없으면 0으로 시작
