@@ -26,7 +26,7 @@ public class Account extends TimeStamped {
     private String password;
     private String nickname;
     private Integer point;
-    private int rankScore;
+    private Integer rankScore;
     private String profileImage;
     @Column(length = 500)
     private String refreshToken;
@@ -48,6 +48,7 @@ public class Account extends TimeStamped {
         this.password = password;
         this.nickname = nickname;
         this.point = point;
+        this.rankScore = 0;
         this.role = role;
         this.profileImage = null;
         this.refreshToken = null;
