@@ -3,6 +3,7 @@ package chimhaha.chimcard.user.service;
 import chimhaha.chimcard.common.AwsProperties;
 import chimhaha.chimcard.common.FileValidator;
 import chimhaha.chimcard.entity.Account;
+import chimhaha.chimcard.entity.AccountRole;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
 import chimhaha.chimcard.game.dto.GameRecordDto;
 import chimhaha.chimcard.game.repository.GameCustomRepository;
@@ -75,6 +76,23 @@ public class AccountService {
     // 마이페이지 > 게임 전적
     public List<GameRecordDto> gameRecords(Long accountId) {
         return gameCustomRepository.getMyGameRecords(accountId);
+    }
+
+    // 관리자
+    public List<UserDetailDto> getAllUser() {
+        return accountRepository.findAll().stream().map(UserDetailDto::new).toList();
+    }
+
+    @Transactional
+    public void updateRole(Long accountId, AccountRole role) {
+        Account account = getAccount(accountId);
+        account.updateRole(role);
+    }
+
+    @Transactional
+    public void updatePoint(Long accountId, Integer point) {
+        Account account = getAccount(accountId);
+        account.increasePoint(point);
     }
 
     private Account getAccount(Long accountId) {
