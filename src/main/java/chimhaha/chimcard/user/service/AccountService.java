@@ -30,7 +30,7 @@ import static chimhaha.chimcard.common.MessageConstants.EXIST_NICKNAME;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class UserService {
+public class AccountService {
 
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;

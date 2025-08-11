@@ -5,7 +5,7 @@ import chimhaha.chimcard.game.dto.GameRecordDto;
 import chimhaha.chimcard.user.dto.PasswordCheckDto;
 import chimhaha.chimcard.user.dto.UserDetailDto;
 import chimhaha.chimcard.user.dto.UserUpdateDto;
-import chimhaha.chimcard.user.service.UserService;
+import chimhaha.chimcard.user.service.AccountService;
 import chimhaha.chimcard.utils.AccountUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,13 +20,13 @@ import java.util.List;
 @RequestMapping("/api/user")
 public class UserController {
 
-    private final UserService userService;
+    private final AccountService accountService;
 
     @GetMapping("/myInfo")
     public ApiResponse<UserDetailDto> getMyInfo() {
         Long accountId = AccountUtils.getAccountId();
 
-        return ApiResponse.success(userService.getMyInfo(accountId));
+        return ApiResponse.success(accountService.getMyInfo(accountId));
     }
 
     @PostMapping("/checkPassword")
@@ -34,20 +34,20 @@ public class UserController {
         log.info("password: {}", dto.password());
         Long accountId = AccountUtils.getAccountId();
 
-        return ApiResponse.success(userService.checkPassword(accountId, dto.password()));
+        return ApiResponse.success(accountService.checkPassword(accountId, dto.password()));
     }
 
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<UserDetailDto> update(UserUpdateDto dto) {
         Long accountId = AccountUtils.getAccountId();
 
-        return ApiResponse.success(userService.update(accountId, dto));
+        return ApiResponse.success(accountService.update(accountId, dto));
     }
 
     @GetMapping("/gameRecords")
     public ApiResponse<List<GameRecordDto>> gameRecords() {
         Long accountId = AccountUtils.getAccountId();
 
-        return ApiResponse.success(userService.gameRecords(accountId));
+        return ApiResponse.success(accountService.gameRecords(accountId));
     }
 }
