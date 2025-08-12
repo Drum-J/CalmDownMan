@@ -2,10 +2,7 @@ package chimhaha.chimcard.game.service;
 
 import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
-import chimhaha.chimcard.game.dto.BattleCardDto;
-import chimhaha.chimcard.game.dto.FieldCardDto;
-import chimhaha.chimcard.game.dto.GameInfoDto;
-import chimhaha.chimcard.game.dto.MyGameCardDto;
+import chimhaha.chimcard.game.dto.*;
 import chimhaha.chimcard.game.event.*;
 import chimhaha.chimcard.game.repository.GameCardRepository;
 import chimhaha.chimcard.game.repository.GameRoomRepository;
@@ -83,7 +80,12 @@ public class GameService {
             gameRoom.updatePlayer2SessionId(sessionId);
         }
 
-        String otherPlayer = player1.getId().equals(playerId) ? player2.getNickname() : player1.getNickname();
+        OtherPlayerInfo otherPlayer = null;
+        if (player1.getId().equals(playerId)) {
+            otherPlayer = new OtherPlayerInfo(player2);
+        } else {
+            otherPlayer = new OtherPlayerInfo(player1);
+        }
 
         // 내 손패 카드
         List<MyGameCardDto> myCards = gameCardRepository.findWithCardByGameRoomAndPlayerId(gameRoomId, playerId)
