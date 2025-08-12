@@ -4,6 +4,8 @@ import chimhaha.chimcard.entity.GameStatus;
 import chimhaha.chimcard.entity.QAccount;
 import chimhaha.chimcard.game.dto.GameRecordDto;
 import chimhaha.chimcard.game.dto.QGameRecordDto;
+import chimhaha.chimcard.game.dto.QRankResponseDto;
+import chimhaha.chimcard.game.dto.RankResponseDto;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 import static chimhaha.chimcard.entity.GameStatus.FINISHED;
+import static chimhaha.chimcard.entity.QAccount.*;
 import static chimhaha.chimcard.entity.QGameRoom.gameRoom;
 
 @Repository
@@ -46,6 +49,27 @@ public class GameCustomRepository {
                 )
                 .orderBy(gameRoom.createAt.desc())
                 .limit(20)
+                .fetch();
+    }
+
+    public List<RankResponseDto> top10Rank() {
+        return query
+                .select(
+                        new QRankResponseDto(
+                                account.username,
+                                account.nickname,
+                                account.profileImage,
+                                account.rankScore,
+                                account.win.doubleValue()
+                                        .divide(account.win.add(account.draw).add(account.lose))
+                                        .multiply(100)
+                                        .round()
+                                        .as("winRate")
+                        )
+                )
+                .from(account)
+                .orderBy(account.rankScore.desc())
+                .limit(10)
                 .fetch();
     }
 
