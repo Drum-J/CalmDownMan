@@ -2,6 +2,9 @@
 
 ## 📖 프로젝트 소개
 
+- 개발 기간 : 25.04.28 ~ 25.08.08
+- 개인 프로젝트
+
 `침온카`는 웹소켓을 기반으로 한 실시간 1vs1 카드 배틀 게임입니다. 사용자들은 자신만의 덱을 구성하여 다른 플레이어와 전략적인 대결을 펼칠 수 있으며, 카드 교환 시스템을 통해 필요한 카드를 교환할 수 있습니다.
 
 이 프로젝트는 Spring Boot와 Java 21을 기반으로 구축되었으며, 실시간 통신, 동시성 제어, 객체지향 설계 등 백엔드 개발의 다양한 기술적 과제를 해결하는 데 중점을 두었습니다.
@@ -21,25 +24,26 @@
     -   웹소켓을 이용한 실시간 매칭 시스템
     -   턴 기반 카드 제출 및 전투 로직
     -   게임 결과 처리 및 기록
--   **카드 거래:**
-    -   사용자 간 카드 거래 게시판
-    -   거래 요청 및 수락/거절 기능
+-   **카드 교환:**
+    -   사용자 간 카드 교환 게시판
+    -   교환 요청 및 수락/거절 기능
 -   **기타:**
     -   AOP를 이용한 커스텀 로깅
     -   QueryDSL을 활용한 동적 쿼리
-    -   P6Spy를 통한 SQL 로깅 및 분석
-    -   GitHub Actions를 이용한 CI/CD (예정)
+    -   P6Spy를 통한 SQL 로깅
+    -   GitHub Actions를 이용한 CI/CD
 
 ---
 
 ## 🛠️ 기술 스택 (Tech Stack)
 
-| 구분 | 기술                                                                                     |
-| --- |----------------------------------------------------------------------------------------|
-| **Backend** | Java 21, Spring Boot 3.4.0, Spring Security, Spring Data JPA, QueryDSL, JWT, WebSocket |
-| **Database** | MySQL, H2 (for testing)                                                                |
-| **Cloud** | AWS [EC2, ,RDS, S3] (예정)                                                               |
+| 구분                    | 기술                                                                                     |
+|-----------------------|----------------------------------------------------------------------------------------|
+| **Backend**           | Java 21, Spring Boot 3.4.0, Spring Security, Spring Data JPA, QueryDSL, JWT, WebSocket |
+| **Database**          | MySQL, H2 (for testing)                                                                |
+| **Cloud**             | AWS [EC2, RDS, S3, Load Balancer, Route 53]                                            |
 | **Tools & Libraries** | Lombok, P6Spy, Spring Retry, Gradle                                                    |
+| **Monitoring**      | Prometheus, Grafana, Loki |
 
 ---
 
@@ -173,12 +177,23 @@ erDiagram
 
 -   `POST /api/signup`: 회원가입
 -   `GET /api/signup/checkUsername`: 아이디 중복 확인
+-   `GET /api/signup/checkNickname`: 닉네임 중복 확인
 -   `POST /api/login`: 로그인 (Access Token, Refresh Token 발급)
 -   `POST /api/token/logout`: 로그아웃
 -   `POST /api/token/refresh`: Access Token 갱신
 -   `GET /api/user/myInfo`: 내 정보 조회
 -   `POST /api/user/checkPassword`: 비밀번호 확인
 -   `PUT /api/user/update`: 회원 정보 수정 (프로필 이미지 포함)
+-   `GET /api/user/gameRecords`: 게임 전적 확인
+
+</details>
+
+<details>
+<summary><b>유저 관리 (Admin)</b></summary>
+
+-   `GET /api/admin/user`: 전체 유저 조회
+-   `PUT /api/admin/user/{accountId}/role`: 유저 Role 변경
+-   `PUT /api/admin/user/{accountId}/point`: Point 지급
 
 </details>
 
@@ -201,6 +216,7 @@ erDiagram
 
 -   `POST /api/admin/card`: 새로운 카드 등록
 -   `PUT /api/admin/card/{id}`: 카드 정보 수정
+-   `DELETE /api/admin/card/{id}`: 카드 삭제
 -   `POST /api/admin/card/season`: 새로운 시즌 등록
 
 </details>
@@ -210,8 +226,13 @@ erDiagram
 
 -   `POST /api/game/matching/join`: 게임 매칭 대기열 참가
 -   `DELETE /api/game/matching/cancel`: 게임 매칭 취소
--   `GET /api/game/{gameRoomId}`: 게임 매칭 성공 시 상대 정보 및 내 카드 조회
--   `@MessageMapping("/game/{gameRoomId}/play")`: (WebSocket) 카드 제출
+-   `@MessageMapping() /api/game/{gameRoomId}/info`: 게임 매칭 성공 시 상대 정보 및 내 카드 조회
+-   `GET /api/game/check/{playerId}`: 해당 플레이어가 진행 중인 게임이 있는지 체크
+-   `POST /api/game/{gameRoomId}/cardSubmit`: 카드 제출
+-   `POST /api/game/{gameRoomId}/battle`: 카드 배틀 진행
+-   `POST /api/game/{gameRoomId}/fieldBattle`: 필드 배틀 진행
+-   `POST /api/game/{gameRoomId}/surrender`: 항복
+-   `POST /api/game/{gameRoomId}/timeout`: 플레이어의 재연결 대기 시간(60초) 이후 최종 연결 상태 체크
 
 </details>
 
@@ -220,14 +241,14 @@ erDiagram
 
 -   `GET /api/trade/list`: 거래 게시글 목록 조회 (검색 및 페이징)
 -   `GET /api/trade/{id}`: 거래 게시글 상세 조회 (게시자가 올린 카드)
--   `POST /api/trade/post`: 거래 게시글 등록
--   `POST /api/trade/post/cancel/{id}`: 거래 게시글 등록 취소
 -   `GET /api/trade/request/{id}`: 특정 게시글에 온 거래 요청 목록 조회
 -   `GET /api/trade/request/detail/{id}`: 거래 요청 상세 조회 (요청자가 올린 카드)
+-   `POST /api/trade/post`: 거래 게시글 등록
 -   `POST /api/trade/request/{id}`: 거래 요청
--   `POST /api/trade/request/cancel/{id}`: 거래 요청 취소
 -   `POST /api/trade/complete/{id}`: 거래 수락 및 완료
 -   `POST /api/trade/reject/{id}`: 거래 거절
+-   `POST /api/trade/post/cancel/{id}`: 거래 게시글 등록 취소
+-   `POST /api/trade/request/cancel/{id}`: 거래 요청 취소
 
 </details>
 
@@ -316,11 +337,11 @@ public int match(Card other) {
 
 2.  **Spring Retry:**
     -   낙관적 락 실패는 일시적인 경합 상황일 가능성이 높다고 판단하여, 무조건 실패 처리하기보다는 재시도를 통해 정상 처리될 기회를 주기로 했습니다.
-    -   `@Retryable` 어노테이션을 사용하여 낙관적 락 예외가 발생했을 때, 해당 로직(카드 지급 등)을 자동으로 몇 차례 재시도하도록 구현했습니다. 이를 통해 대부분의 동시성 이슈를 해결할 수 있을 것이라 기대하고 있습니다. (25.07.21 작성 시점 `Test code`만 확인 하고 실제 유저의 상황은 확인하지 못함)
+    -   `@Retryable` 어노테이션을 사용하여 낙관적 락 예외가 발생했을 때, 해당 로직(카드 지급 등)을 자동으로 몇 차례 재시도하도록 구현했습니다. 이를 통해 대부분의 동시성 이슈를 해결할 수 있을 것이라 기대하고 있습니다. 
 
 3.  **최종 실패 처리:**
     -   만약 재시도마저 모두 실패할 경우, 해당 교환 정보를 `FailedTrade`라는 별도의 테이블에 기록하도록 구현했습니다.
-    -   이는 추후 관리자가 원인을 파악하고 수동으로 데이터를 복구할 수 있는 최종적인 안전장치 역할을 합니다. (수동 복구 기능은 향후 구현 예정)
+    -   이는 추후 관리자가 원인을 파악하고 수동으로 데이터를 복구할 수 있는 최종적인 안전장치 역할을 합니다.
 
 **학습 내용:**
 -   `synchronized`만으로는 해결하기 어려운 분산 환경의 동시성 문제를 낙관적 락을 통해 효과적으로 제어할 수 있음을 배웠습니다.
@@ -378,7 +399,20 @@ public int match(Card other) {
 -   서비스 간의 직접적인 의존성을 줄이고 이벤트라는 매개체를 통해 느슨하게 결합(Loosely Coupled)된 아키텍처를 설계하는 경험을 했습니다. 이는 시스템의 유연성과 확장성을 높이는 데 큰 도움이 되었습니다.
 -   복잡한 동기/비동기 흐름 속에서 발생할 수 있는 미묘한 실행 순서 문제를 이벤트 기반 아키텍처를 통해 명확하고 안정적으로 해결할 수 있음을 깨달았습니다.
 
-### 4. WebSocket을 이용한 실시간 기능 구현
+### 4. WebSocket을 이용한 게임 도중 플레이어의 이탈
 
-실시간 게임 기능을 구현하기 위해 `WebSocket` 기술을 처음으로 도입했습니다.  
-`STOMP` 프로토콜을 함께 사용하여 메시지 기반 통신을 구현했으며, 간단한 테스트 코드를 작성하고 서버와 클라이언트 간의 메시지 흐름을 직접 디버깅하며 기술에 대한 이해도를 높일 수 있었습니다.
+**문제 상황:**
+
+게임을 진행 중 새로 고침이나 url을 조작한 페이지 이동, 탭/창 닫기와 같은 외부 요인으로 인해 웹 소켓의 연결이 끊기는 경우가 발생 할 수 있습니다.
+내부적인 이동은 react의 `useBlocker`를 사용하여 막았으나 외부요인을 컨트롤하는데 어려움이 있었습니다.
+
+**해결 과정:**
+이 문제를 해결하기 위해 `SimpMessageHeaderAccessor`와 `SessionDisconnectEvent`를 사용하여 웹소켓의 SessionId를 관리하도록 했습니다.
+
+1. **Session ID 관리:** `SimpMessageHeaderAccessor`를 통해 웹 소켓을 연결할 때 SessionId를 획득, 획득한 SessionId를 저장하고 연결이 끊길 때 `SessionDisconnectEvent`를 통해 끊어진 SessionId를 파악해 게임 도중 연결이 끊겼다면 상대 플레이어에게 연결이 끊겼다는 메세지를 전달하고 60초 동안 재연결을 기다린다고 알려줍니다.
+2. **연결 끊김 타이밍 판단:** 웹소켓의 연결은 `게임 매칭`, `게임 룸` 2군데에서 발생하기 때문에 어느 타이밍에 연결이 끊겼는지 판단해야했습니다. 이를 위해 `게임 매칭` 시에 연결 헤더에 `playerId` 값을 보내도록 하고 `StompHeaderInterceptor`를 사용해 해당 값을 관리하도록 했습니다. 이후 `SessionDisconnectEvent`에서 `sessionAttributes.containsKey("playerId")` 조건으로 매칭중에 끊겼는지 게임 진행 중에 끊겼는지 판단했습니다.
+3. **게임 종료 처리:** 게임 중 연결이 끊겼을 시 60초의 재접속 대기 시간을 주고 시간 내에 접속이 되면 게임을 계속 진행, 접속이 되지 않으면 이탈한 플레이어의 패배로 게임을 종료합니다.
+
+**학습 내용:**
+- 웹소켓의 연결/끊김 시 SessionID 값을 확인할 수 있다는 걸 알았고, `MessageHeaderAccessor`와 `SessionDisconnectEvent`로 쉽게 해당 Session ID 값을 관리하는 방법을 배웠습니다.
+- 웹소켓을 연결할 때 헤더에 특정 값을 담을 수 있고 해당 값을 `StompHeaderInterceptor`을 통해 관리하는 방법을 배웠습니다.
