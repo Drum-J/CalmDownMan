@@ -1,16 +1,16 @@
 package chimhaha.chimcard.card.service;
 
-import chimhaha.chimcard.card.dto.CardCreateDto;
-import chimhaha.chimcard.card.dto.SeasonCreateDto;
-import chimhaha.chimcard.card.dto.CardUpdateDto;
+import chimhaha.chimcard.card.dto.*;
+import chimhaha.chimcard.card.repository.AccountCardRepository;
+import chimhaha.chimcard.card.repository.CardCustomRepository;
 import chimhaha.chimcard.card.repository.CardRepository;
 import chimhaha.chimcard.card.repository.CardSeasonRepository;
 import chimhaha.chimcard.common.AwsProperties;
 import chimhaha.chimcard.common.FileValidator;
-import chimhaha.chimcard.entity.Card;
-import chimhaha.chimcard.entity.CardSeason;
-import chimhaha.chimcard.entity.Grade;
+import chimhaha.chimcard.entity.*;
 import chimhaha.chimcard.exception.ResourceNotFoundException;
+import chimhaha.chimcard.user.repository.AccountRepository;
+import chimhaha.chimcard.utils.CardUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +22,11 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static chimhaha.chimcard.common.MessageConstants.*;
 
@@ -34,6 +39,9 @@ public class AdminCardService {
     private final CardSeasonRepository cardSeasonRepository;
     private final S3Client s3Client;
     private final AwsProperties awsProperties;
+    private final CardCustomRepository cardCustomRepository;
+    private final AccountRepository accountRepository;
+    private final AccountCardRepository accountCardRepository;
 
     @Transactional
     public void saveCard(CardCreateDto dto) {
@@ -142,5 +150,35 @@ public class AdminCardService {
                 .build();
 
         s3Client.deleteObject(request);
+    }
+
+    @Transactional
+    public void supplyCards(SupplyCardRequestDto dto) {
+        Long accountId = dto.accountId();
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException(ACCOUNT_NOT_FOUND));
+
+        List<SupplyCardDto> cards = dto.cards();
+        Set<Long> cardIds = cards.stream().map(SupplyCardDto::cardId).collect(Collectors.toSet());
+        List<AccountCard> accountCards = cardCustomRepository.getMyCardByCardIds(accountId, cardIds);
+
+        Map<Long, AccountCard> accountCardMap = CardUtils.accountCardMapLong(accountCards);
+        List<AccountCard> upsertCards = new ArrayList<>();
+        for (SupplyCardDto card : cards) {
+            AccountCard accountCard = accountCardMap.get(card.cardId());
+
+            if (accountCard != null) {
+                accountCard.increaseCount(card.count());
+            } else {
+                accountCard = new AccountCard(account, getCardById(card.cardId()), card.count());
+            }
+            upsertCards.add(accountCard);
+        }
+        accountCardRepository.saveAll(upsertCards);
+    }
+
+    private Card getCardById(Long cardId) {
+        return cardRepository.findById(cardId)
+                .orElseThrow(() -> new ResourceNotFoundException(CARD_NOT_FOUND));
     }
 }

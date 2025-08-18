@@ -77,4 +77,9 @@ public class CardReadController {
 
         return ApiResponse.success(list);
     }
+
+    @GetMapping("/account/{accountId}")
+    public ApiResponse<List<MyCardDetailDto>> getAccountCards(@PathVariable("accountId") Long accountId) {
+        return ApiResponse.success(cardService.getMyCards(accountId, null));
+    }
 }

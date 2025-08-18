@@ -2,6 +2,7 @@ package chimhaha.chimcard.card.controller;
 
 import chimhaha.chimcard.card.dto.CardCreateDto;
 import chimhaha.chimcard.card.dto.SeasonCreateDto;
+import chimhaha.chimcard.card.dto.SupplyCardRequestDto;
 import chimhaha.chimcard.card.service.AdminCardService;
 import chimhaha.chimcard.card.dto.CardUpdateDto;
 import chimhaha.chimcard.common.ApiResponse;
@@ -46,5 +47,10 @@ public class CardAdminController {
         adminCardService.saveSeason(dto);
 
         return ApiResponse.success(dto.seasonName() + " 등록 완료!");
+    }
+
+    @PostMapping("/supply")
+    public void cardSupply(@RequestBody SupplyCardRequestDto dto) {
+        adminCardService.supplyCards(dto);
     }
 }
